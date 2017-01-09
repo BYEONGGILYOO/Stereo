@@ -19,13 +19,23 @@ public:
 		cv::Mat m_rightImg;
 	}Input;
 
+	typedef struct _stereo_database
+	{
+		std::vector<cv::KeyPoint> m_vecKeyPoint;		// keypoint
+		cv::Mat m_vecDescriptor;						// Descriptor
+		std::vector<cv::Vec3f> m_vecWorldCoord;			// 3D coordinates
+	}DB;
+
 	typedef struct _stereo_output
 	{
-
+		std::vector<cv::KeyPoint> m_KeyPoint;
+		cv::Mat m_Descriptor;
+		std::vector<cv::Vec3f> m_WorldCoord;
 	}Output;
 private:
 	Input m_input;
 	Output m_output;
+	std::vector<DB> m_vecDB;
 
 	FeatureExtractor m_feature;
 
@@ -55,5 +65,8 @@ public:
 	bool openCam();
 	bool readCam();
 	void run();
+	bool save(char * dbPath);
+	bool load(char * dbPath);
+	void keyframe();
 };
 

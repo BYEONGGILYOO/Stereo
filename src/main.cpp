@@ -3,6 +3,8 @@
 #include <cmath>
 #include <algorithm>
 #include <fstream>
+#include <Windows.h>
+
 #include "openCV.h"
 #include "opencv2\ximgproc\disparity_filter.hpp"
 #include "StereoCalibration.h"
@@ -17,103 +19,103 @@ typedef enum _mode_
 
 int main(int argc, char** argv)
 {
-	cv::VideoCapture cap;
-	cap.open(0);
-	if (!cap.isOpened())
-	{
-		std::cout << "Capture could not be opened successfully" << std::endl;
-		system("pause");
-		return 0;
-	}
-	// rgb data
-	cv::Mat leftImg, rightImg;
-	// d
-	cv::Mat disparity16S = cv::Mat(cap.get(cv::CAP_PROP_FRAME_HEIGHT), cap.get(cv::CAP_PROP_FRAME_WIDTH) / 2, CV_16S);
-	cv::Mat img16Sr = cv::Mat(cap.get(cv::CAP_PROP_FRAME_HEIGHT), cap.get(cv::CAP_PROP_FRAME_WIDTH) / 2, CV_16S);
+	//cv::VideoCapture cap;
+	//cap.open(0);
+	//if (!cap.isOpened())
+	//{
+	//	std::cout << "Capture could not be opened successfully" << std::endl;
+	//	system("pause");
+	//	return 0;
+	//}
+	//// rgb data
+	//cv::Mat leftImg, rightImg;
+	//// d
+	//cv::Mat disparity16S = cv::Mat(cap.get(cv::CAP_PROP_FRAME_HEIGHT), cap.get(cv::CAP_PROP_FRAME_WIDTH) / 2, CV_16S);
+	//cv::Mat img16Sr = cv::Mat(cap.get(cv::CAP_PROP_FRAME_HEIGHT), cap.get(cv::CAP_PROP_FRAME_WIDTH) / 2, CV_16S);
 
-	cv::Mat filteredDisparity;
+	//cv::Mat filteredDisparity;
 
-	int mode = -1;
-	int cmd = 0;
+	//int mode = -1;
+	//int cmd = 0;
 
-	// chess board info.
-	int board_w = 4;
-	int board_h = 7;
-	float square_w = 0.314f / 9;
-	float square_h = 0.209f / 6;
-	bool lineOn = true;
-	bool reg_chessboard = false;
-	const int nFrames = 30;
-	StereoCalibration calib(board_w, board_h, square_w, square_h);
+	//// chess board info.
+	//int board_w = 4;
+	//int board_h = 7;
+	//float square_w = 0.314f / 9;
+	//float square_h = 0.209f / 6;
+	//bool lineOn = true;
+	//bool reg_chessboard = false;
+	//const int nFrames = 30;
+	//StereoCalibration calib(board_w, board_h, square_w, square_h);
 
-	// calibration param
-	double baseLine = 120.0;
-	double covergence = 0.00285;
-	double FX = 700.0;
-	double FY = 700.0;
-	double CX = 320.0;
-	double CY = 240.0;
-	double K1 = -0.15;
-	double K2 = 0.0;
-	double P1 = 0.0;
-	double P2 = 0.0;
+	//// calibration param
+	//double baseLine = 120.0;
+	//double covergence = 0.00285;
+	//double FX = 700.0;
+	//double FY = 700.0;
+	//double CX = 320.0;
+	//double CY = 240.0;
+	//double K1 = -0.15;
+	//double K2 = 0.0;
+	//double P1 = 0.0;
+	//double P2 = 0.0;
 
-	cv::Matx33d K = cv::Matx33d(FX, 0.0, CX, 0.0, FY, CY, 0.0, 0.0, 1.0);
-	cv::Matx41d distCoeffs = cv::Matx41d(K1, K2, P1, P2);
-	cv::Matx44d Q = cv::Matx44d(	// http://answers.opencv.org/question/4379/from-3d-point-cloud-to-disparity-map/
-		1.0, 0.0, 0.0, -CX,
-		0.0, 1.0, 0.0, -CY,
-		0.0, 0.0, 0.0, FX,
-		0.0, 0.0, -1.0 / baseLine, 0/*(CX - CX) / baseLine*/
-	);
-	cv::Mat Q_32F = cv::Mat::eye(4, 4, CV_32FC1);
-	Q_32F.at<float>(0, 3) = -CX;
-	Q_32F.at<float>(1, 3) = -CY;
-	Q_32F.at<float>(2, 2) = 0;
-	Q_32F.at<float>(2, 3) = FX;	
-	Q_32F.at<float>(3, 2) = -1.0 / baseLine;
-	Q_32F.at<float>(3, 3) = 0;
+	//cv::Matx33d K = cv::Matx33d(FX, 0.0, CX, 0.0, FY, CY, 0.0, 0.0, 1.0);
+	//cv::Matx41d distCoeffs = cv::Matx41d(K1, K2, P1, P2);
+	//cv::Matx44d Q = cv::Matx44d(	// http://answers.opencv.org/question/4379/from-3d-point-cloud-to-disparity-map/
+	//	1.0, 0.0, 0.0, -CX,
+	//	0.0, 1.0, 0.0, -CY,
+	//	0.0, 0.0, 0.0, FX,
+	//	0.0, 0.0, -1.0 / baseLine, 0/*(CX - CX) / baseLine*/
+	//);
+	//cv::Mat Q_32F = cv::Mat::eye(4, 4, CV_32FC1);
+	//Q_32F.at<float>(0, 3) = -CX;
+	//Q_32F.at<float>(1, 3) = -CY;
+	//Q_32F.at<float>(2, 2) = 0;
+	//Q_32F.at<float>(2, 3) = FX;	
+	//Q_32F.at<float>(3, 2) = -1.0 / baseLine;
+	//Q_32F.at<float>(3, 3) = 0;
 
-	//// SGBM
-	cv::Ptr<cv::StereoSGBM> sgbm = cv::StereoSGBM::create(0, 16 * 6, 9);
-	//Ptr<StereoSGBM> sgbm = StereoSGBM::create(0,    //int minDisparity
-	//	96,     //int numDisparities
-	//	5,      //int SADWindowSize
-	//	600,    //int P1 = 0
-	//	2400,   //int P2 = 0
-	//	20,     //int disp12MaxDiff = 0
-	//	16,     //int preFilterCap = 0
-	//	1,      //int uniquenessRatio = 0
-	//	100,    //int speckleWindowSize = 0
-	//	20,     //int speckleRange = 0
-	//	true);  //bool fullDP = false
+	////// SGBM
+	//cv::Ptr<cv::StereoSGBM> sgbm = cv::StereoSGBM::create(0, 16 * 6, 9);
+	////Ptr<StereoSGBM> sgbm = StereoSGBM::create(0,    //int minDisparity
+	////	96,     //int numDisparities
+	////	5,      //int SADWindowSize
+	////	600,    //int P1 = 0
+	////	2400,   //int P2 = 0
+	////	20,     //int disp12MaxDiff = 0
+	////	16,     //int preFilterCap = 0
+	////	1,      //int uniquenessRatio = 0
+	////	100,    //int speckleWindowSize = 0
+	////	20,     //int speckleRange = 0
+	////	true);  //bool fullDP = false
 
-	// param
-	int sgbmWinSize = 3;
-	int numberOfDisparities = 16 * 6;
-	int cn = 3;
+	//// param
+	//int sgbmWinSize = 3;
+	//int numberOfDisparities = 16 * 6;
+	//int cn = 3;
 
-	// init
-	sgbm->setPreFilterCap(63);
-	sgbm->setBlockSize(sgbmWinSize);
-	sgbm->setP1(8 * cn*sgbmWinSize*sgbmWinSize);
-	sgbm->setP2(32 * cn*sgbmWinSize*sgbmWinSize);
-	sgbm->setMode(cv::StereoSGBM::MODE_SGBM_3WAY);
+	//// init
+	//sgbm->setPreFilterCap(63);
+	//sgbm->setBlockSize(sgbmWinSize);
+	//sgbm->setP1(8 * cn*sgbmWinSize*sgbmWinSize);
+	//sgbm->setP2(32 * cn*sgbmWinSize*sgbmWinSize);
+	//sgbm->setMode(cv::StereoSGBM::MODE_SGBM_3WAY);
 
 
-	// filter
-	cv::Ptr<cv::ximgproc::DisparityWLSFilter> wls_filter;
-	wls_filter = cv::ximgproc::createDisparityWLSFilter(sgbm);
-	cv::Ptr<cv::StereoMatcher> sm = cv::ximgproc::createRightMatcher(sgbm);
-	// param
-	double lambda = 8000.0;
-	double sigma = 1.5;
-	double vis_multi = 1.0;
+	//// filter
+	//cv::Ptr<cv::ximgproc::DisparityWLSFilter> wls_filter;
+	//wls_filter = cv::ximgproc::createDisparityWLSFilter(sgbm);
+	//cv::Ptr<cv::StereoMatcher> sm = cv::ximgproc::createRightMatcher(sgbm);
+	//// param
+	//double lambda = 8000.0;
+	//double sigma = 1.5;
+	//double vis_multi = 1.0;
 
-	//// viz
-	cv::viz::Viz3d window("Coordinate Frame1");
-	window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem());
-	window.setViewerPose(cv::Affine3d(cv::Vec3d(), cv::Vec3d()));
+	////// viz
+	//cv::viz::Viz3d window("Coordinate Frame1");
+	//window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem());
+	//window.setViewerPose(cv::Affine3d(cv::Vec3d(), cv::Vec3d()));
 
 	///
 	std::ofstream log;
@@ -128,9 +130,30 @@ int main(int argc, char** argv)
 	if (!stereo.openCam())
 		return 0;
 	// main loop
-	while (!window.wasStopped())
+	while (1)
 	{
 		stereo.run();
+
+		if (GetAsyncKeyState(0x49) & 0x8000) {		// I
+			printf("keyframed\n");
+			stereo.keyframe();
+		}
+		if (GetAsyncKeyState(0x53) & 0x8000) {		// S
+			if (stereo.save("..\\db\\stereo.dat"))
+				printf("save done!\n");
+			else
+				printf("save failed..\n");
+		}
+		if (GetAsyncKeyState(0x4C) & 0x8000) {		// L
+			if (stereo.load("..\\db\\stereo.dat"))
+				printf("load done!\n");
+			else
+				printf("load failed..\n");
+		}
+		if (GetAsyncKeyState(0x51) & 0x8000) {		// Q
+			printf("break! \n");
+			break;
+		}
 //		cv::Mat tmpImg;
 //		cap.read(tmpImg);
 //		leftImg = tmpImg(cv::Rect(0, 0, tmpImg.cols / 2, tmpImg.rows));
