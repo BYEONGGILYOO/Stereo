@@ -145,8 +145,10 @@ int main(int argc, char** argv)
 				printf("save failed..\n");
 		}
 		if (GetAsyncKeyState(0x4C) & 0x8000) {		// L
-			if (stereo.load("..\\db\\stereo.dat"))
+			if (stereo.load("..\\db\\stereo.dat")) {
 				printf("load done!\n");
+				stereo.m_mode = Stereo::M_QUERY;
+			}
 			else
 				printf("load failed..\n");
 		}

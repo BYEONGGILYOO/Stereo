@@ -5,6 +5,7 @@
 #include <cmath>
 #include <algorithm>
 #include <fstream>
+#include <tuple>
 #include "openCV.h"
 #include "opencv2\ximgproc\disparity_filter.hpp"
 #include "StereoCalibration.h"
@@ -13,10 +14,15 @@
 class Stereo
 {
 public:
+	typedef enum _stereo_mode
+	{
+		M_NULL = -1, M_DB = 0, M_QUERY = 1
+	}Mode;
 	typedef struct _stereo_input
 	{
 		cv::Mat m_leftImg;
 		cv::Mat m_rightImg;
+		int m_mode;
 	}Input;
 
 	typedef struct _stereo_database
@@ -60,13 +66,18 @@ private:
 	cv::Ptr<cv::StereoSGBM> sgbm;
 	
 public:
+	int m_mode = M_NULL;
 	Stereo();
 	~Stereo();
 	bool openCam();
 	bool readCam();
+	void caculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, std::vector<cv::Vec3f>& dst);
 	void run();
+	void prevRun();
 	bool save(char * dbPath);
 	bool load(char * dbPath);
+	//void setInput(Stereo::Input input);
+	
 	void keyframe();
 };
 

@@ -63,6 +63,7 @@ void FeatureExtractor::featureMatching(std::vector<cv::KeyPoint>& kp1, std::vect
 		return;
 	}
 
+	std::vector<int> mappingIdx;
 	for (int i = 0; i<matched1.size(); i++)
 	{
 		if (inlier_mask.at<uchar>(i))
@@ -73,14 +74,16 @@ void FeatureExtractor::featureMatching(std::vector<cv::KeyPoint>& kp1, std::vect
 			dscrInlier1.push_back(dscr1.row(matched_matches[i].queryIdx));
 			dscrInlier2.push_back(dscr2.row(matched_matches[i].trainIdx));
 			inlier_matches.push_back(cv::DMatch(new_i, new_i, 0));
+			mappingIdx.push_back(i);
 		}
 	}
 	m_output.m_leftKp = inliers1;
 	m_output.m_rightKp = inliers2;
 	m_output.m_leftDescr = dscrInlier1.clone();
 	m_output.m_rightDescr = dscrInlier2.clone();
-
-	*matched_ratio = inliers1.size() * 1.0 / matched1.size();
+	m_output.m_mappingIdx = mappingIdx;
+	if(matched_ratio != nullptr)
+		*matched_ratio = inliers1.size() / (double)matched1.size();
 }
 
 void FeatureExtractor::allCompute()		// 초기버전
@@ -219,7 +222,12 @@ void FeatureExtractor::run()
 	pointFeatureExtracte(m_input.m_RightImg, kp2, dscr2);
 
 	double matched_ratio = 0;
+	double time = static_cast<double>(cv::getTickCount());
+
 	featureMatching(kp1, kp2, dscr1, dscr2, &matched_ratio);
+
+	time = static_cast<double>(cv::getTickCount()) - time;
+	time /= cv::getTickFrequency();
 
 	cv::Mat canvas;
 	cv::hconcat(m_input.m_LeftImg, m_input.m_RightImg, canvas);
@@ -234,6 +242,8 @@ void FeatureExtractor::run()
 		cv::line(canvas, pt1, pt2, color);
 	}
 	//cv::drawMatches(left, inliers1, right, inliers2, inlier_matches, ShowMatch);
+	std::string str = "Inlier Ratio: " + std::to_string(matched_ratio) + ", Time " + std::to_string(time) + "ms";
+	cv::putText(canvas, str, cv::Point(45, 45), cv::HersheyFonts(), 1, cv::Scalar(0, 255, 0));
 	cv::imshow("Matches2", canvas);
 	cv::waitKey(10);
 

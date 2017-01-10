@@ -1,6 +1,7 @@
 #include "Stereo.h"
 
 Stereo::Stereo()
+	:m_mode(M_NULL)
 {
 	baseLine = 120.0;
 	covergence = 0.00285;
@@ -14,8 +15,9 @@ Stereo::Stereo()
 	p2 = 0.0;
 
 	window = cv::viz::Viz3d("Coordinate Frame");
-	window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem());
-	window.setViewerPose(cv::Affine3d(cv::Vec3d(), cv::Vec3d(0.0, 0.0, -5.0)));
+	window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(1000.0));
+	window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(cv::Matx33d(fX, 0.0, cX, 0.0, fY, cY, 0.0, 0.0, 1.0), 1000.0, cv::viz::Color::green()));
+	//window.setViewerPose(cv::Affine3d(cv::Vec3d(), cv::Vec3d(0.0, 0.0, -5000.0)));
 
 	// test
 	sgbm = cv::StereoSGBM::create(0, 16 * 6, 9);
@@ -67,6 +69,20 @@ bool Stereo::readCam()
 	return true;
 }
 
+void Stereo::caculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>&kp2, std::vector<cv::Vec3f>& dst)
+{
+	dst.clear();
+	int size = kp1.size();
+	for (int i = 0; i < size; i++)
+	{
+		cv::Point pt = cv::Point((int)(kp1.at(i).pt.x + 0.5f), (int)(kp2.at(i).pt.y + 0.5f));
+		cv::Vec3f threeD;
+		threeD.val[2] = fX * baseLine / (kp1.at(i).pt.x - kp2.at(i).pt.x);					// Z
+		threeD.val[0] = (kp1.at(i).pt.x - cX) * threeD.val[2] / fX;							// X
+		threeD.val[1] = (kp2.at(i).pt.y - cY) * threeD.val[2] / fY;							// Y
+		dst.push_back(threeD);
+	}
+}
 void Stereo::run()
 {
 	if (!readCam()) {
@@ -83,6 +99,172 @@ void Stereo::run()
 
 	FeatureExtractor::Output feOutput = m_feature.getOutput();
 
+	caculateDepth(feOutput.m_leftKp, feOutput.m_rightKp, m_output.m_WorldCoord);
+
+	cv::Mat depth(m_input.m_leftImg.size(), CV_32FC3, cv::Scalar::all(0));
+
+	int size = m_output.m_WorldCoord.size();
+	for (int i = 0; i < size; i++)
+	{
+		cv::Point pt = cv::Point((int)(feOutput.m_leftKp.at(i).pt.x + 0.5f), (int)(feOutput.m_leftKp.at(i).pt.y + 0.5f));
+		depth.at<cv::Vec3f>(pt) = m_output.m_WorldCoord.at(i);
+	}
+	m_output.m_Descriptor = feOutput.m_leftDescr;
+	m_output.m_KeyPoint = feOutput.m_leftKp;
+
+	// scaling	
+	/*for (int y = 0; y<depth.rows; y++)
+		for (int x = 0; x < depth.cols; x++)
+		{
+			cv::Vec3f &data = pointCloud.at<cv::Vec3f>(y, x);
+			if (abs(data[2]) >= 10000.f || abs(data[0]) > 10000.f || abs(data[1]) > 10000.f)
+				data = cv::Vec3f();
+			else {
+				data = data / 1000.f;
+			}
+		}*/
+
+	// draw
+	// color mapping
+	cv::Mat colorMap(depth.size(), CV_8UC3, cv::Scalar::all(0));
+	for (int i = 0; i < size; i++)
+	{
+		cv::Point pt = cv::Point((int)(feOutput.m_leftKp.at(i).pt.x + 0.5f), (int)(feOutput.m_leftKp.at(i).pt.y + 0.5f));
+		colorMap.at<cv::Vec3b>(pt) = feOutput.m_color.at(i);
+	}
+
+	cv::viz::WCloud cw(depth, /*colorMap*/cv::viz::Color::yellow());
+	cw.setRenderingProperty(cv::viz::POINT_SIZE, 2);
+	window.showWidget("Cloud Widget", cw);
+	window.showWidget("Grid Widget", cv::viz::WGrid(cv::Vec<int, 2>::all(20), cv::Vec<double, 2>::all((1000.0))), cv::Affine3d(cv::Vec3d(CV_PI / 2.0, 0, 0), cv::Vec3d()));
+	
+
+
+	if (/*m_input.*/m_mode == M_QUERY)
+	{
+		int dbSize = m_vecDB.size();
+		if (dbSize <= 0)
+			return;
+
+		for (int i = 0; i < dbSize; i++)
+		{
+			// caculate db depth
+			std::vector<cv::KeyPoint>& dbKP = m_vecDB.at(i).m_vecKeyPoint;
+
+			cv::Mat dbDepth(m_input.m_leftImg.size(), CV_32FC3, cv::Scalar::all(0));
+			for (int j = 0; j < dbKP.size(); j++)
+			{
+				cv::Point pt = cv::Point((int)(dbKP.at(j).pt.x + 0.5f), (int)(dbKP.at(j).pt.y + 0.5f));
+				dbDepth.at<cv::Vec3f>(pt) = m_vecDB.at(i).m_vecWorldCoord.at(j);
+			}
+			//dbDepth /= 1000.f;
+			cv::viz::WCloud cw2(dbDepth, cv::viz::Color::red());
+			cw2.setRenderingProperty(cv::viz::POINT_SIZE, 2);
+			window.showWidget("Cloude Widget2", cw2);			
+			
+			// left db , left query matching
+			FeatureExtractor _fe;
+			_fe.featureMatching(m_vecDB.at(i).m_vecKeyPoint, m_output.m_KeyPoint, m_vecDB.at(i).m_vecDescriptor, m_output.m_Descriptor);
+			FeatureExtractor::Output _feOutput;
+			_feOutput = _fe.getOutput();
+
+			// draw matching line
+			std::vector<cv::Point3d> wpt1, wpt2;
+			std::vector<cv::Point3d> temp_wpt1, temp_wpt2;
+			std::vector<cv::KeyPoint>::iterator _itr = _feOutput.m_leftKp.begin();
+
+			for (int j = 0; j < _feOutput.m_leftKp.size(); j++)
+			{/*
+				wpt1.push_back(
+					cv::Point3d(
+					(double)m_vecDB.at(i).m_vecWorldCoord.at(_feOutput.m_mappingIdx.at(j)).val[0],
+					(double)m_vecDB.at(i).m_vecWorldCoord.at(_feOutput.m_mappingIdx.at(j)).val[1],
+					(double)m_vecDB.at(i).m_vecWorldCoord.at(_feOutput.m_mappingIdx.at(j)).val[2]
+				));
+				wpt2.push_back(
+					cv::Point3d(
+						(double)m_output.m_WorldCoord.at(_feOutput.m_mappingIdx.at(j)).val[0],
+						(double)m_output.m_WorldCoord.at(_feOutput.m_mappingIdx.at(j)).val[1],
+						(double)m_output.m_WorldCoord.at(_feOutput.m_mappingIdx.at(j)).val[2]
+					));*/
+
+				for (int k = 0; k < m_vecDB.at(i).m_vecKeyPoint.size(); k++)
+				{
+					if (m_vecDB.at(i).m_vecKeyPoint.at(k).pt == _feOutput.m_leftKp.at(j).pt) {
+						wpt1.push_back(
+							cv::Point3d(
+							(double)m_vecDB.at(i).m_vecWorldCoord.at(k).val[0],
+							(double)m_vecDB.at(i).m_vecWorldCoord.at(k).val[1], 
+							(double)m_vecDB.at(i).m_vecWorldCoord.at(k).val[2])
+						);
+					}	
+				}
+				for (int l = 0; l < m_output.m_KeyPoint.size(); l++)
+				{
+					if (m_output.m_KeyPoint.at(l).pt == _feOutput.m_rightKp.at(j).pt) {
+						wpt2.push_back(
+							cv::Point3d(
+							(double)m_output.m_WorldCoord.at(l).val[0],
+							(double)m_output.m_WorldCoord.at(l).val[1] ,
+							(double)m_output.m_WorldCoord.at(l).val[2] )
+						);
+					}
+				}
+			}
+
+		//	printf("%d %d -> %d %d\n", (int)wpt1.size(), (int)wpt2.size(), (int)temp_wpt1.size(), (int)temp_wpt2.size());
+			std::vector<std::tuple<double, cv::Point3d, cv::Point3d>> point3D;
+			std::string str;			
+			for (int j = 0; j < wpt1.size(); j++) {
+				cv::viz::WLine lw(wpt1.at(j), wpt2.at(j));
+				str = "Line Widget" +std::to_string(j);
+				window.showWidget(str, lw);
+				point3D.push_back(make_tuple((double)std::sqrt(std::pow(wpt1.at(j).x - wpt2.at(j).x, 2) + std::pow(wpt1.at(j).y - wpt2.at(j).y, 2) + std::pow(wpt1.at(j).z - wpt2.at(j).z, 2))
+					, wpt1.at(j), wpt2.at(j)));
+			}
+			
+			std::sort(point3D.begin(), point3D.end(), [](const std::tuple<double, cv::Point3d, cv::Point3d>& a, const std::tuple<double, cv::Point3d, cv::Point3d>& b)->bool {
+				return std::get<0>(a) < std::get<0>(b);
+			});
+
+			std::vector<cv::Point3d> new1, new2;
+			for (int __i = 0; __i < point3D.size(); __i++)
+			{
+				new1.push_back(get<1>(point3D.at(__i)));
+				new2.push_back(get<2>(point3D.at(__i)));
+			}
+			// camera pose
+			cv::Mat affine3D, inlier_affine3D;
+			//cv::estimateAffine3D(wpt1, wpt2, affine3D, inlier_affine3D);
+			cv::estimateAffine3D(new1, new2, affine3D, inlier_affine3D);
+			std::cout << affine3D << std::endl;
+			cv::Affine3d affine(affine3D);
+			//std::cout << affine << std::endl;
+			std::cout << affine.rotation() << std::endl;
+			std::cout << affine.translation() << std::endl;
+			//cv::waitKey();
+			window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(cv::Matx33d(fX, 0.0, cX, 0.0, fY, cY, 0.0, 0.0, 1.0), 1000.0, cv::viz::Color::green()), Affine3d(Vec3d(), affine.translation()));
+		}
+	}
+
+
+	window.spinOnce(30, true);
+}
+
+void Stereo::prevRun() {
+	if (!readCam()) {
+		printf("cameras is not opened\n");
+		return;
+	}
+
+	FeatureExtractor::Input feInput;
+	feInput.m_LeftImg = m_input.m_leftImg;
+	feInput.m_RightImg = m_input.m_rightImg;
+
+	m_feature.setInput(feInput);
+	m_feature.run();
+
+	FeatureExtractor::Output feOutput = m_feature.getOutput();
 	// caculate depth
 	cv::Mat depth(m_input.m_leftImg.size(), CV_32FC3, cv::Scalar::all(0));
 	int size = feOutput.m_leftKp.size();
@@ -107,9 +289,9 @@ void Stereo::run()
 			cv::Vec3f &data = pointCloud.at<cv::Vec3f>(y, x);
 			if (abs(data[2]) >= 10000.f || abs(data[0]) > 10000.f || abs(data[1]) > 10000.f)
 				data = cv::Vec3f();
-			else {
+			/*else {
 				data = data / 1000.f;
-			}
+			}*/
 		}
 
 	//
@@ -124,6 +306,8 @@ void Stereo::run()
 			0.0, 0.0, 0.0, fX,
 			0.0, 0.0, -1.0 / baseLine, 0/*(CX - CX) / baseLine*/
 		);
+		cv::Mat disparity32F;
+		disparity16S.convertTo(disparity32F, CV_32F, 1.f / (16.f * 6.f ));
 		cv::reprojectImageTo3D(disparity16S, xyz, Q, true);
 
 		cv::Mat pointXYZ(xyz.size(), CV_32FC3, cv::Scalar::all(0));
@@ -133,11 +317,11 @@ void Stereo::run()
 			if (abs(xyz.at<cv::Vec3f>(pt).val[0]) > 10000.f || abs(xyz.at<cv::Vec3f>(pt).val[1]) > 10000.f || abs(xyz.at<cv::Vec3f>(pt).val[2]) >= 10000.f)
 				pointXYZ.at<cv::Vec3f>(pt) = cv::Vec3f();
 			else
-				pointXYZ.at<cv::Vec3f>(pt) = -xyz.at<cv::Vec3f>(pt) / 50.f;
+				pointXYZ.at<cv::Vec3f>(pt) = -xyz.at<cv::Vec3f>(pt) ;
 			//std::cout << pt << ", " << pointXYZ.at<cv::Vec3f>(pt) <<std::endl;
 		}
 
-		cv::viz::WCloud cw2(pointXYZ, cv::viz::Color::pink());
+		cv::viz::WCloud cw2(pointXYZ/16.f, cv::viz::Color::pink());
 		cw2.setRenderingProperty(cv::viz::POINT_SIZE, 2);
 		window.showWidget("Cloud Widget2", cw2);
 	}
@@ -149,9 +333,10 @@ void Stereo::run()
 		cv::Point pt = cv::Point((int)(feOutput.m_leftKp.at(i).pt.x + 0.5f), (int)(feOutput.m_leftKp.at(i).pt.y + 0.5f));
 		colorMap.at<cv::Vec3b>(pt) = feOutput.m_color.at(i);
 	}
-	cv::viz::WCloud cw(pointCloud, colorMap/*cv::viz::Color::yellow()*/);
+	cv::viz::WCloud cw(pointCloud, /*colorMap*/cv::viz::Color::yellow());
 	cw.setRenderingProperty(cv::viz::POINT_SIZE, 2);
 	window.showWidget("Cloud Widget", cw);
+	window.showWidget("Grid Widget", cv::viz::WGrid(), cv::Affine3d(cv::Vec3d(CV_PI / 2.0, 0, 0), cv::Vec3d()));
 	window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(cv::Matx33d(fX, 0, cX, 0, fY, cY, 0, 0, 1)));
 
 	///////////////
@@ -181,6 +366,7 @@ bool Stereo::save(char* dbPath)
 	//	return false;
 
 	DBsaver.write((char*)&nDocSize, sizeof(int));
+
 
 	for (int i = 0; i < nDocSize; i++)
 	{

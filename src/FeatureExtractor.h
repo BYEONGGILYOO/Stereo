@@ -26,6 +26,7 @@ public:
 		std::vector<cv::KeyPoint> m_rightKp;
 		cv::Mat m_leftDescr;
 		cv::Mat m_rightDescr;
+		std::vector<int> m_mappingIdx;
 		std::vector<cv::Vec3b> m_color;
 	}Output;
 
@@ -50,8 +51,6 @@ private:
 
 	std::vector<cv::Point2f> Points(std::vector<cv::KeyPoint> keyPoints);
 	void lineCompute();
-	void pointFeatureExtracte(cv::Mat & src, std::vector<cv::KeyPoint>& kp, cv::Mat & dscr);
-	void featureMatching(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, cv::Mat & dscr1, cv::Mat & dscr2, double* matched_ratio = nullptr);
 	std::vector<cv::Vec3b> colorMapping(int Size);
 
 public:
@@ -69,7 +68,8 @@ public:
 	{
 		return m_output;
 	}
-
+	void pointFeatureExtracte(cv::Mat & src, std::vector<cv::KeyPoint>& kp, cv::Mat & dscr);
+	void featureMatching(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, cv::Mat & dscr1, cv::Mat & dscr2, double* matched_ratio = nullptr);
 	void allCompute();
 	void run();
 
