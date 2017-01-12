@@ -89,6 +89,7 @@ void Stereo::run()
 		printf("cameras is not opened\n");
 		return;
 	}
+	double time = (double)getTickCount();
 
 	FeatureExtractor::Input feInput;
 	feInput.m_LeftImg = m_input.m_leftImg;
@@ -149,7 +150,7 @@ void Stereo::run()
 		for (int i = 0; i < dbSize; i++)
 		{
 			// caculate db depth
-			std::vector<cv::KeyPoint>& dbKP = m_vecDB.at(i).m_vecKeyPoint;
+			std::vector<cv::KeyPoint> dbKP = m_vecDB.at(i).m_vecKeyPoint;
 
 			cv::Mat dbDepth(m_input.m_leftImg.size(), CV_32FC3, cv::Scalar::all(0));
 			for (int j = 0; j < dbKP.size(); j++)
@@ -228,10 +229,10 @@ void Stereo::run()
 			});
 
 			std::vector<cv::Point3f> new1, new2;
-			for (int __i = 0; __i < point3D.size(); __i++)
+			for (int _i = 0; _i < point3D.size(); _i++)
 			{
-				new1.push_back(get<1>(point3D.at(__i)));
-				new2.push_back(get<2>(point3D.at(__i)));
+				new1.push_back(get<1>(point3D.at(_i)));
+				new2.push_back(get<2>(point3D.at(_i)));
 			}
 			// camera pose
 			cv::Mat affine3D, inlier_affine3D;
@@ -248,16 +249,41 @@ void Stereo::run()
 			estimateRigid3D(new1, new2, rot, tran);
 			std::cout << tran << std::endl;
 			Affine3d affine(rot, cv::Vec3d(tran.row(0).val[0], tran.row(1).val[0], tran.row(2).val[0]));
-			/*
-			affine.rotate(rot);
-			affine.translate(cv::Vec3d(tran.row(0).val[0], tran.row(1).val[0], tran.row(2).val[0]));*/
+			
 			std::cout << affine.translation() << std::endl << std::endl;
 			window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(cv::Matx33d(fX, 0.0, cX, 0.0, fY, cY, 0.0, 0.0, 1.0), 1000.0, cv::viz::Color::green()), affine);
+
+			time = ((double)getTickCount() - time) / getTickFrequency();
+			
+			//// Visualize
+			cv::Mat canvas;
+
+			cv::hconcat(m_input.m_leftImg, m_input.m_rightImg, canvas);
+			std::string str2 = "Reference, Time " + std::to_string(time) + "ms";
+			cv::putText(canvas, str2, cv::Point(m_input.m_leftImg.cols * 2 / 3.f, 45), cv::HersheyFonts(), 1, cv::Scalar(0, 255, 0), 2);
+
+			std::string filename = "..\\db\\Image\\" + std::to_string(i + 1) + ".jpg";
+			cv::vconcat(canvas, loadImage(filename), canvas);
+
+			int _size = _feOutput.m_leftKp.size();
+			std::cout << _size << std::endl;
+			std::vector<cv::Vec3b> _colorMap = _fe.colorMapping(_size);
+			for (int _i = 0; _i < _size; _i++)
+			{
+				cv::Point pt1 = cv::Point(_feOutput.m_leftKp.at(_i).pt.x + 0.5f, _feOutput.m_leftKp.at(_i).pt.y + 0.5f);
+				cv::Point pt2 = cv::Point(_feOutput.m_rightKp.at(_i).pt.x + 0.5f, _feOutput.m_rightKp.at(_i).pt.y + 480.5f);
+				cv::Scalar color = cv::Scalar(_colorMap.at(_i).val[0], _colorMap.at(_i).val[1], _colorMap.at(_i).val[2]);
+				cv::circle(canvas, pt1, 3, color);
+				cv::circle(canvas, pt2, 3, color);
+				cv::line(canvas, pt1, pt2, color);
+			}
+			cv::resize(canvas, canvas, cv::Size(640, 480));
+			cv::imshow("Canvas", canvas);
 		}
 	}
-
-
-	window.spinOnce(30, true);
+	
+	cv::waitKey(15);
+	window.spinOnce(15, true);
 	window.removeAllWidgets();
 }
 
@@ -542,10 +568,15 @@ void Stereo::estimateRigid3D(std::vector<cv::Vec3f>& pt1, std::vector<cv::Vec3f>
 	cv::SVD svd;
 	svd.compute(A, w, u, vt);
 
-	cv::Mat R = vt * u;
+	std::cout << "A\n" << A << std::endl << std::endl;
+	std::cout << "w\n" << w << std::endl << std::endl;
+	std::cout << "u\n" << u << std::endl << std::endl;
+	std::cout << "vt\n" << vt << std::endl << std::endl;
+
+	cv::Mat R = vt.t() * u.t();
 	if (cv::determinant(R) < 0) {
 		vt.row(2) *= -1;
-		R = vt * u;
+		R = vt.t() * u.t();
 	}
 	
 	//// finding T
@@ -585,4 +616,20 @@ void Stereo::keyframe()
 	db.m_vecWorldCoord = m_output.m_WorldCoord;
 
 	m_vecDB.push_back(db);
+
+	std::string filename = "..\\db\\Image\\" + std::to_string(m_vecDB.size()) + ".jpg";
+	saveImage(filename);
+	
+}
+
+void Stereo::saveImage(std::string fileName)
+{
+	cv::Mat saveImage;
+	cv::hconcat(m_input.m_leftImg, m_input.m_rightImg, saveImage);
+	cv::imwrite(fileName, saveImage);
+}
+
+cv::Mat Stereo::loadImage(std::string fileName)
+{
+	return cv::imread(fileName);
 }

@@ -243,8 +243,6 @@ void FeatureExtractor::run()
 	}
 	//cv::drawMatches(left, inliers1, right, inliers2, inlier_matches, ShowMatch);
 	std::string str = "Inlier Ratio: " + std::to_string(matched_ratio) + ", Time " + std::to_string(time) + "ms";
-	cv::putText(canvas, str, cv::Point(45, 45), cv::HersheyFonts(), 1, cv::Scalar(0, 255, 0));
+	cv::putText(canvas, str, cv::Point(45, 45), cv::HersheyFonts(), 1, cv::Scalar(0, 255, 0), 2);
 	cv::imshow("Matches2", canvas);
-	cv::waitKey(10);
-
 }

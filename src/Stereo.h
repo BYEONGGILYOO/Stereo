@@ -81,5 +81,7 @@ public:
 	//void setInput(Stereo::Input input);
 	
 	void keyframe();
+	void saveImage(std::string fileName);
+	cv::Mat loadImage(std::string fileName);
 };
 

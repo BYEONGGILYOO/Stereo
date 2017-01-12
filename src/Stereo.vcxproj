@@ -146,12 +146,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CommonFunctions.cpp" />
     <ClCompile Include="FeatureExtractor.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Stereo.cpp" />
     <ClCompile Include="StereoCalibration.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CommonFunctions.h" />
     <ClInclude Include="FeatureExtractor.h" />
     <ClInclude Include="openCV.h" />
     <ClInclude Include="Stereo.h" />
