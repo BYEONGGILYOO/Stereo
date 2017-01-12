@@ -76,6 +76,8 @@ public:
 	void prevRun();
 	bool save(char * dbPath);
 	bool load(char * dbPath);
+	static void estimateRigid3D(std::vector<cv::Vec3f>& pt1, std::vector<cv::Vec3f>& pt2, cv::Matx<double, 3, 3>& rot, cv::Matx<double, 3, 1>& tran, double * error = nullptr);
+	static void estimateRigid3D(std::vector<cv::Point3f>& pt1, std::vector<cv::Point3f>& pt2, cv::Matx<double, 3, 3>& rot, cv::Matx<double, 3, 1>& tran, double* error = nullptr);
 	//void setInput(Stereo::Input input);
 	
 	void keyframe();
