@@ -11,6 +11,8 @@
 #include "FeatureExtractor.h"
 #include "Stereo.h"
 std::string type2str(int type);
+bool openCam(cv::VideoCapture* cap);
+bool readCam(cv::VideoCapture* cap, cv::Mat* img);
 
 typedef enum _mode_
 {
@@ -19,142 +21,111 @@ typedef enum _mode_
 
 int main(int argc, char** argv)
 {
-	//cv::VideoCapture cap;
-	//cap.open(0);
-	//if (!cap.isOpened())
-	//{
-	//	std::cout << "Capture could not be opened successfully" << std::endl;
-	//	system("pause");
-	//	return 0;
-	//}
-	//// rgb data
-	//cv::Mat leftImg, rightImg;
-	//// d
-	//cv::Mat disparity16S = cv::Mat(cap.get(cv::CAP_PROP_FRAME_HEIGHT), cap.get(cv::CAP_PROP_FRAME_WIDTH) / 2, CV_16S);
-	//cv::Mat img16Sr = cv::Mat(cap.get(cv::CAP_PROP_FRAME_HEIGHT), cap.get(cv::CAP_PROP_FRAME_WIDTH) / 2, CV_16S);
-
-	//cv::Mat filteredDisparity;
-
-	//int mode = -1;
-	//int cmd = 0;
-
-	//// chess board info.
-	//int board_w = 4;
-	//int board_h = 7;
-	//float square_w = 0.314f / 9;
-	//float square_h = 0.209f / 6;
-	//bool lineOn = true;
-	//bool reg_chessboard = false;
-	//const int nFrames = 30;
-	//StereoCalibration calib(board_w, board_h, square_w, square_h);
-
-	//// calibration param
-	//double baseLine = 120.0;
-	//double covergence = 0.00285;
-	//double FX = 700.0;
-	//double FY = 700.0;
-	//double CX = 320.0;
-	//double CY = 240.0;
-	//double K1 = -0.15;
-	//double K2 = 0.0;
-	//double P1 = 0.0;
-	//double P2 = 0.0;
-
-	//cv::Matx33d K = cv::Matx33d(FX, 0.0, CX, 0.0, FY, CY, 0.0, 0.0, 1.0);
-	//cv::Matx41d distCoeffs = cv::Matx41d(K1, K2, P1, P2);
-	//cv::Matx44d Q = cv::Matx44d(	// http://answers.opencv.org/question/4379/from-3d-point-cloud-to-disparity-map/
-	//	1.0, 0.0, 0.0, -CX,
-	//	0.0, 1.0, 0.0, -CY,
-	//	0.0, 0.0, 0.0, FX,
-	//	0.0, 0.0, -1.0 / baseLine, 0/*(CX - CX) / baseLine*/
-	//);
-	//cv::Mat Q_32F = cv::Mat::eye(4, 4, CV_32FC1);
-	//Q_32F.at<float>(0, 3) = -CX;
-	//Q_32F.at<float>(1, 3) = -CY;
-	//Q_32F.at<float>(2, 2) = 0;
-	//Q_32F.at<float>(2, 3) = FX;	
-	//Q_32F.at<float>(3, 2) = -1.0 / baseLine;
-	//Q_32F.at<float>(3, 3) = 0;
-
-	////// SGBM
-	//cv::Ptr<cv::StereoSGBM> sgbm = cv::StereoSGBM::create(0, 16 * 6, 9);
-	////Ptr<StereoSGBM> sgbm = StereoSGBM::create(0,    //int minDisparity
-	////	96,     //int numDisparities
-	////	5,      //int SADWindowSize
-	////	600,    //int P1 = 0
-	////	2400,   //int P2 = 0
-	////	20,     //int disp12MaxDiff = 0
-	////	16,     //int preFilterCap = 0
-	////	1,      //int uniquenessRatio = 0
-	////	100,    //int speckleWindowSize = 0
-	////	20,     //int speckleRange = 0
-	////	true);  //bool fullDP = false
-
-	//// param
-	//int sgbmWinSize = 3;
-	//int numberOfDisparities = 16 * 6;
-	//int cn = 3;
-
-	//// init
-	//sgbm->setPreFilterCap(63);
-	//sgbm->setBlockSize(sgbmWinSize);
-	//sgbm->setP1(8 * cn*sgbmWinSize*sgbmWinSize);
-	//sgbm->setP2(32 * cn*sgbmWinSize*sgbmWinSize);
-	//sgbm->setMode(cv::StereoSGBM::MODE_SGBM_3WAY);
-
-
-	//// filter
-	//cv::Ptr<cv::ximgproc::DisparityWLSFilter> wls_filter;
-	//wls_filter = cv::ximgproc::createDisparityWLSFilter(sgbm);
-	//cv::Ptr<cv::StereoMatcher> sm = cv::ximgproc::createRightMatcher(sgbm);
-	//// param
-	//double lambda = 8000.0;
-	//double sigma = 1.5;
-	//double vis_multi = 1.0;
-
-	////// viz
-	//cv::viz::Viz3d window("Coordinate Frame1");
-	//window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem());
-	//window.setViewerPose(cv::Affine3d(cv::Vec3d(), cv::Vec3d()));
-
+	int mode = _NULL;
 	///
 	std::ofstream log;
 	log.open("data.txt");
 	
+	VideoCapture cap[2];
+	cv::Mat img[2];
+	if (!openCam(cap))
+		return 0;
+
+	//// Stereo Calibration
+	StereoCalibration stereoCalib(7, 4, 0.026, 0.026);
+	int nFrames = 50;		// the num of chessboard
+	bool reg_chessboard = false;
+
 	/// flag
 	bool isCalibrated = false;
 
 	//// FeatureExtractor
 	FeatureExtractor fe;
 	Stereo stereo;
-	if (!stereo.openCam())
-		return 0;
+	
+	if (stereoCalib.LoadCalibrationData("..\\data\\camera\\")) {
+		mode = UNDISTORTION;
+		stereo.setCalibOutput(stereoCalib.getOutput());
+	}
+
 	// main loop
 	while (1)
 	{
+		Stereo::Input stInput;
+		if (readCam(cap, img))
+		{
+			if (mode == UNDISTORTION)
+			{
+				stereoCalib.Undistort(img[0], stInput.m_leftImg, img[1], stInput.m_rightImg);
+				//cv::waitKey(10);
+			}
+			else
+			{
+				stInput.m_leftImg = img[0];
+				stInput.m_rightImg = img[1];
+			}
+			stereo.setInput(stInput);
+		}
+		else
+			return 0;
+
 		stereo.run();
 
 		if (GetAsyncKeyState(0x49) & 0x8000) {		// I
 			printf("keyframed\n");
 			stereo.keyframe();
 		}
+
 		if (GetAsyncKeyState(0x53) & 0x8000) {		// S
-			if (stereo.save("..\\db\\stereo.dat"))
-				printf("save done!\n");
+			if (stereo.save("..\\data\\stereo.dat"))
+				printf("ref point save done!\n");
 			else
-				printf("save failed..\n");
+				printf("ref point save failed..\n");
+			if (stereoCalib.SaveCalibrationData("..\\data\\camera\\"))
+				printf("calibration data save done!\n");
+			else
+				printf("calibration data save failed..\n");
 		}
+
 		if (GetAsyncKeyState(0x4C) & 0x8000) {		// L
-			if (stereo.load("..\\db\\stereo.dat")) {
+			if (stereo.load("..\\data\\stereo.dat")) {
 				printf("load done!\n");
 				stereo.m_mode = Stereo::M_QUERY;
 			}
 			else
 				printf("load failed..\n");
+			if (stereoCalib.LoadCalibrationData("..\\data\\camera\\")) {
+				printf("calibration data load done!\n");
+				mode = UNDISTORTION;
+			}
+			else
+				printf("calibration data load failed..\n");
 		}
 		if (GetAsyncKeyState(0x51) & 0x8000) {		// Q
 			printf("break! \n");
 			break;
+		}
+		if (GetAsyncKeyState(0x43) & 0x8000) {		// C
+			mode = CALIBRATION;
+			printf("Calibration..\n");
+		}
+
+		if(mode == CALIBRATION)
+		{
+			reg_chessboard = true;
+			int iFrames = 0;
+			while (iFrames < nFrames)
+			{
+				readCam(cap, img);
+				iFrames = stereoCalib.FindChessboard(img[0].clone(), img[1].clone(), reg_chessboard);
+				printf("iFrame : nFrame = %d : %d\n", iFrames, nFrames);
+			}
+			if (stereoCalib.RunCalibration()) {
+				destroyWindow("find chess corner");
+				printf("Calibration Done!\n");
+				mode = UNDISTORTION;
+			}
+			reg_chessboard = false;
 		}
 //		cv::Mat tmpImg;
 //		cap.read(tmpImg);
@@ -303,6 +274,8 @@ int main(int argc, char** argv)
 //		if (cmd == 's') {
 //			cv::waitKey();
 //		}
+
+	cv::waitKey(30);
 	}
 	return 0;
 }
@@ -330,122 +303,33 @@ std::string type2str(int type) {
 	return r;
 }
 
-//
-///**
-//* @file transformations.cpp
-//* @brief Visualizing cloud in different positions, coordinate frames, camera frustums
-//* @author Ozan Cagri Tonkal
-//*/
-//
-//using namespace cv;
-//using namespace std;
-//
-///**
-//* @function help
-//* @brief Display instructions to use this tutorial program
-//*/
-//void help()
-//{
-//	cout
-//		<< "--------------------------------------------------------------------------" << endl
-//		<< "This program shows how to use makeTransformToGlobal() to compute required pose,"
-//		<< "how to use makeCameraPose and Viz3d::setViewerPose. You can observe the scene "
-//		<< "from camera point of view (C) or global point of view (G)" << endl
-//		<< "Usage:" << endl
-//		<< "./transformations [ G | C ]" << endl
-//		<< endl;
-//}
+bool openCam(cv::VideoCapture* cap)
+{
+	cap[0].open(0);
+	cap[1].open(1);
 
-///**
-//* @function cvcloud_load
-//* @brief load bunny.ply
-//*/
-//Mat cvcloud_load()
-//{
-//	Mat cloud(1, 1889, CV_32FC3);
-//	ifstream ifs("bunny.ply");
-//
-//	string str;
-//	for (size_t i = 0; i < 12; ++i)
-//		getline(ifs, str);
-//
-//	Point3f* data = cloud.ptr<cv::Point3f>();
-//	float dummy1, dummy2;
-//	for (size_t i = 0; i < 1889; ++i)
-//		ifs >> data[i].x >> data[i].y >> data[i].z >> dummy1 >> dummy2;
-//
-//	cloud *= 5.0f;
-//	return cloud;
-//}
-//
-///**
-//* @function main
-//*/
-//int main(int argn, char **argv)
-//{
-//
-//	bool camera_pov = false;
-//
-//	/// Create a window
-//	viz::Viz3d myWindow("Coordinate Frame");
-//
-//	/// Add coordinate axes
-//	myWindow.showWidget("Coordinate Widget", viz::WCoordinateSystem());
-//
-//	/// Let's assume camera has the following properties
-//	Vec3f cam_pos(3.0f, 3.0f, 3.0f), cam_focal_point(3.0f, 3.0f, 2.0f), cam_y_dir(-1.0f, 0.0f, 0.0f);
-//
-//	/// We can get the pose of the cam using makeCameraPose
-//	Affine3f cam_pose = viz::makeCameraPose(cam_pos, cam_focal_point, cam_y_dir);
-//
-//	/// We can get the transformation matrix from camera coordinate system to global using
-//	/// - makeTransformToGlobal. We need the axes of the camera
-//	Affine3f transform = viz::makeTransformToGlobal(Vec3f(0.0f, -1.0f, 0.0f), Vec3f(-1.0f, 0.0f, 0.0f), Vec3f(0.0f, 0.0f, -1.0f), cam_pos);
-//
-//	/// Create a cloud widget.
-//	Mat bunny_cloud = cvcloud_load();
-//	
-//	for (int row = 0; row < bunny_cloud.rows; row++) {
-//		for (int col = 0; col < bunny_cloud.cols; col++) {
-//			Vec3f data = Vec3f(bunny_cloud.at<Vec3f>(row, col)[0], bunny_cloud.at<Vec3f>(row, col)[1], bunny_cloud.at<Vec3f>(row, col)[2]);
-//			bunny_cloud.at<Vec3f>(row, col) = data;
-//		}
-//	}
-//	ofstream data;
-//	data.open("data.txt");
-//	for (int y = 0; y < bunny_cloud.rows; y++) {
-//		for (int x = 0; x < bunny_cloud.cols * 3; x++) {
-//			data << bunny_cloud.at<float>(y, x) << "\t";
-//		}
-//		data << "\n\n";
-//	}
-//	data.close();
-//
-//	viz::WCloud cloud_widget(bunny_cloud, viz::Color::green());
-//
-//	/// Pose of the widget in camera frame
-//	Affine3f cloud_pose = Affine3f().translate(Vec3f(0.0f, 0.0f, 3.0f));
-//	/// Pose of the widget in global frame
-//	Affine3f cloud_pose_global = transform * cloud_pose;
-//
-//	/// Visualize camera frame
-//	if (!camera_pov)
-//	{
-//		viz::WCameraPosition cpw(0.5); // Coordinate axes
-//		viz::WCameraPosition cpw_frustum(Vec2f(0.889484, 0.523599)); // Camera frustum
-//		myWindow.showWidget("CPW", cpw, cam_pose);
-//		myWindow.showWidget("CPW_FRUSTUM", cpw_frustum, cam_pose);
-//	}
-//
-//	/// Visualize widget
-//	myWindow.showWidget("bunny", cloud_widget, cloud_pose_global);
-//
-//	/// Set the viewer pose to that of camera
-//	if (camera_pov)
-//		myWindow.setViewerPose(cam_pose);
-//
-//	/// Start event loop.
-//	myWindow.spin();
-//
-//	return 0;
-//}
+	if (!cap[0].isOpened())
+		return false;
+
+	return true;
+}
+
+bool readCam(cv::VideoCapture* cap, cv::Mat* img)
+{
+	if (!cap[0].isOpened())
+		return false;
+	else if (!cap[1].isOpened())
+	{
+		cv::Mat tmpImg;
+		if (!cap[0].read(tmpImg))
+			return false;
+		img[0] = tmpImg(cv::Rect(0, 0, tmpImg.cols / 2, tmpImg.rows)).clone();
+		img[1] = tmpImg(cv::Rect(tmpImg.cols / 2, 0, tmpImg.cols / 2, tmpImg.rows)).clone();
+	}
+	else
+	{
+		if (!cap[0].read(img[0]) || !cap[1].read(img[1]))
+			return false;
+	}
+	return true;
+}

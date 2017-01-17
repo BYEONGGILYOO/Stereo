@@ -26,7 +26,8 @@ public:
 		std::vector<cv::KeyPoint> m_rightKp;
 		cv::Mat m_leftDescr;
 		cv::Mat m_rightDescr;
-		std::vector<int> m_mappingIdx;
+		std::vector<int> m_mappingIdx1;
+		std::vector<int> m_mappingIdx2;
 		std::vector<cv::Vec3b> m_color;
 	}Output;
 

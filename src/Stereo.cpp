@@ -13,10 +13,12 @@ Stereo::Stereo()
 	k2 = 0.0;
 	p1 = 0.0;
 	p2 = 0.0;
+	K = cv::Matx33d(fX, 0.0, cX, 0.0, fY, cY, 0.0, 0.0, 1.0);
 
+	window1 = cv::viz::Viz3d("Coordinate Frame1");
 	window = cv::viz::Viz3d("Coordinate Frame");
 	window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(1000.0));
-	window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(cv::Matx33d(fX, 0.0, cX, 0.0, fY, cY, 0.0, 0.0, 1.0), 1000.0, cv::viz::Color::green()));
+	window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(K, 1000.0, cv::viz::Color::green()));
 	//window.setViewerPose(cv::Affine3d(cv::Vec3d(), cv::Vec3d(0.0, 0.0, -5000.0)));
 
 	// test
@@ -38,58 +40,36 @@ Stereo::~Stereo()
 {
 }
 
-bool Stereo::openCam()
-{
-	cap[0].open(0);
-	cap[1].open(1);
 
-	if(!cap[0].isOpened())
-		return false;
 
-	return true;
-}
-
-bool Stereo::readCam()
-{
-	if(!cap[0].isOpened())
-		return false;
-	else if (!cap[1].isOpened())
-	{
-		cv::Mat tmpImg;
-		if (!cap[0].read(tmpImg))
-			return false;
-		m_input.m_leftImg = tmpImg(cv::Rect(0, 0, tmpImg.cols / 2, tmpImg.rows)).clone();
-		m_input.m_rightImg = tmpImg(cv::Rect(tmpImg.cols / 2, 0, tmpImg.cols / 2, tmpImg.rows)).clone();
-	}
-	else
-	{
-		if (!cap[0].read(m_input.m_leftImg) || !cap[1].read(m_input.m_rightImg))
-			return false;
-	}
-	return true;
-}
-
-void Stereo::caculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>&kp2, std::vector<cv::Vec3f>& dst)
+void Stereo::caculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>&kp2, std::vector<cv::Vec3f>& dst, std::vector<float>& disparity)
 {
 	dst.clear();
+	std::vector<float> tmpDisparity;
 	int size = kp1.size();
 	for (int i = 0; i < size; i++)
 	{
-		cv::Point pt = cv::Point((int)(kp1.at(i).pt.x + 0.5f), (int)(kp2.at(i).pt.y + 0.5f));
 		cv::Vec3f threeD;
-		threeD.val[2] = fX * baseLine / (kp1.at(i).pt.x - kp2.at(i).pt.x);					// Z
-		threeD.val[0] = (kp1.at(i).pt.x - cX) * threeD.val[2] / fX;							// X
-		threeD.val[1] = (kp2.at(i).pt.y - cY) * threeD.val[2] / fY;							// Y
-		dst.push_back(threeD);
+		float fDisparity = (kp1.at(i).pt.x - kp2.at(i).pt.x);
+		tmpDisparity.push_back(fDisparity);
+		//if (abs(fDisparity) > 5.f)	// parelles
+		//{
+			threeD.val[2] = fX * baseLine / fDisparity;											// Z
+			threeD.val[0] = (kp1.at(i).pt.x - cX) * threeD.val[2] / fX;							// X
+			threeD.val[1] = (kp2.at(i).pt.y - cY) * threeD.val[2] / fY;							// Y
+			dst.push_back(threeD);
+		//}
 	}
+	disparity = tmpDisparity;
 }
 void Stereo::run()
 {
-	if (!readCam()) {
+	if (m_input.m_leftImg.empty() || m_input.m_rightImg.empty()) {
 		printf("cameras is not opened\n");
 		return;
 	}
-	double time = (double)getTickCount();
+
+	int64 time = getTickCount();
 
 	FeatureExtractor::Input feInput;
 	feInput.m_LeftImg = m_input.m_leftImg;
@@ -99,8 +79,8 @@ void Stereo::run()
 	m_feature.run();
 
 	FeatureExtractor::Output feOutput = m_feature.getOutput();
-
-	caculateDepth(feOutput.m_leftKp, feOutput.m_rightKp, m_output.m_WorldCoord);
+	std::vector<float> dispari;
+	caculateDepth(feOutput.m_leftKp, feOutput.m_rightKp, m_output.m_WorldCoord, dispari);
 
 	cv::Mat depth(m_input.m_leftImg.size(), CV_32FC3, cv::Scalar::all(0));
 
@@ -112,18 +92,6 @@ void Stereo::run()
 	}
 	m_output.m_Descriptor = feOutput.m_leftDescr;
 	m_output.m_KeyPoint = feOutput.m_leftKp;
-
-	// scaling	
-	/*for (int y = 0; y<depth.rows; y++)
-		for (int x = 0; x < depth.cols; x++)
-		{
-			cv::Vec3f &data = pointCloud.at<cv::Vec3f>(y, x);
-			if (abs(data[2]) >= 10000.f || abs(data[0]) > 10000.f || abs(data[1]) > 10000.f)
-				data = cv::Vec3f();
-			else {
-				data = data / 1000.f;
-			}
-		}*/
 
 	// draw
 	// color mapping
@@ -141,6 +109,7 @@ void Stereo::run()
 	window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(cv::Matx33d(fX, 0.0, cX, 0.0, fY, cY, 0.0, 0.0, 1.0), 1000.0, cv::viz::Color::green()));
 	window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(1000.0));
 
+	m_mode = -1;
 	if (/*m_input.*/m_mode == M_QUERY)
 	{
 		int dbSize = m_vecDB.size();
@@ -175,21 +144,21 @@ void Stereo::run()
 			std::vector<cv::KeyPoint>::iterator _itr = _feOutput.m_leftKp.begin();
 
 			for (int j = 0; j < _feOutput.m_leftKp.size(); j++)
-			{/*
+			{
 				wpt1.push_back(
 					cv::Point3d(
-					(double)m_vecDB.at(i).m_vecWorldCoord.at(_feOutput.m_mappingIdx.at(j)).val[0],
-					(double)m_vecDB.at(i).m_vecWorldCoord.at(_feOutput.m_mappingIdx.at(j)).val[1],
-					(double)m_vecDB.at(i).m_vecWorldCoord.at(_feOutput.m_mappingIdx.at(j)).val[2]
+					(double)m_vecDB.at(i).m_vecWorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[0],
+					(double)m_vecDB.at(i).m_vecWorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[1],
+					(double)m_vecDB.at(i).m_vecWorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[2]
 				));
 				wpt2.push_back(
 					cv::Point3d(
-						(double)m_output.m_WorldCoord.at(_feOutput.m_mappingIdx.at(j)).val[0],
-						(double)m_output.m_WorldCoord.at(_feOutput.m_mappingIdx.at(j)).val[1],
-						(double)m_output.m_WorldCoord.at(_feOutput.m_mappingIdx.at(j)).val[2]
-					));*/
+						(double)m_output.m_WorldCoord.at(_feOutput.m_mappingIdx2.at(j)).val[0],
+						(double)m_output.m_WorldCoord.at(_feOutput.m_mappingIdx2.at(j)).val[1],
+						(double)m_output.m_WorldCoord.at(_feOutput.m_mappingIdx2.at(j)).val[2]
+					));
 
-				for (int k = 0; k < m_vecDB.at(i).m_vecKeyPoint.size(); k++)
+				/*for (int k = 0; k < m_vecDB.at(i).m_vecKeyPoint.size(); k++)
 				{
 					if (m_vecDB.at(i).m_vecKeyPoint.at(k).pt == _feOutput.m_leftKp.at(j).pt) {
 						wpt1.push_back(
@@ -210,11 +179,11 @@ void Stereo::run()
 							(float)m_output.m_WorldCoord.at(l).val[2] )
 						);
 					}
-				}
+				}*/
 			}
 
-		//	printf("%d %d -> %d %d\n", (int)wpt1.size(), (int)wpt2.size(), (int)temp_wpt1.size(), (int)temp_wpt2.size());
 			std::vector<std::tuple<float, cv::Point3f, cv::Point3f>> point3D;
+			
 			std::string str;			
 			for (int j = 0; j < wpt1.size(); j++) {
 				cv::viz::WLine lw(wpt1.at(j), wpt2.at(j));
@@ -224,46 +193,39 @@ void Stereo::run()
 					, wpt1.at(j), wpt2.at(j)));
 			}
 			
-			std::sort(point3D.begin(), point3D.end(), [](const std::tuple<float, cv::Point3f, cv::Point3f>& a, const std::tuple<float, cv::Point3f, cv::Point3f>& b)->bool {
-				return std::get<0>(a) < std::get<0>(b);
-			});
+			//std::sort(point3D.begin(), point3D.end(), [](const std::tuple<float, cv::Point3f, cv::Point3f>& a, const std::tuple<float, cv::Point3f, cv::Point3f>& b)->bool {
+			//	return std::get<0>(a) < std::get<0>(b);
+			//});
+			//
+			//std::vector<cv::Point3f> new1, new2;
+			//for (int _i = 0; _i < point3D.size(); _i++)
+			//{
+			//	new1.push_back(get<1>(point3D.at(_i)));
+			//	new2.push_back(get<2>(point3D.at(_i)));
+			//}
 
-			std::vector<cv::Point3f> new1, new2;
-			for (int _i = 0; _i < point3D.size(); _i++)
-			{
-				new1.push_back(get<1>(point3D.at(_i)));
-				new2.push_back(get<2>(point3D.at(_i)));
-			}
-			// camera pose
-			cv::Mat affine3D, inlier_affine3D;
-			//cv::estimateAffine3D(wpt1, wpt2, affine3D, inlier_affine3D);
-			//cv::estimateAffine3D(new1, new2, affine3D, inlier_affine3D, 3, 0.80);
-			
-			//cv::Affine3d affine(affine3D);
-			//std::cout << affine << std::endl;
-			//cv::waitKey();
-			//window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(cv::Matx33d(fX, 0.0, cX, 0.0, fY, cY, 0.0, 0.0, 1.0), 1000.0, cv::viz::Color::green()), Affine3d(Vec3d(), affine.translation()));
+			//// camera pose			
+			//cv::Matx<double, 3, 3> rot;
+			//cv::Matx<double, 3, 1> tran;
+			//estimateRigid3D(wpt1, wpt2, rot, tran);
+			//std::cout << tran << std::endl;
+			//Affine3d affine(rot, cv::Vec3d(tran.row(0).val[0], tran.row(1).val[0], tran.row(2).val[0]));
+			//
+			//std::cout << affine.translation() << std::endl << std::endl;
+			//window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(K, 1000.0, cv::viz::Color::green()), Affine3d(affine.rotation(), cv::Vec3d()));
 
-			cv::Matx<double, 3, 3> rot;
-			cv::Matx<double, 3, 1> tran;
-			estimateRigid3D(new1, new2, rot, tran);
-			std::cout << tran << std::endl;
-			Affine3d affine(rot, cv::Vec3d(tran.row(0).val[0], tran.row(1).val[0], tran.row(2).val[0]));
-			
-			std::cout << affine.translation() << std::endl << std::endl;
-			window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(cv::Matx33d(fX, 0.0, cX, 0.0, fY, cY, 0.0, 0.0, 1.0), 1000.0, cv::viz::Color::green()), affine);
-
-			time = ((double)getTickCount() - time) / getTickFrequency();
+			time = getTickCount() - time;
+			double fps = (double)time / getTickFrequency();
 			
 			//// Visualize
 			cv::Mat canvas;
-
 			cv::hconcat(m_input.m_leftImg, m_input.m_rightImg, canvas);
-			std::string str2 = "Reference, Time " + std::to_string(time) + "ms";
-			cv::putText(canvas, str2, cv::Point(m_input.m_leftImg.cols * 2 / 3.f, 45), cv::HersheyFonts(), 1, cv::Scalar(0, 255, 0), 2);
+					
+			std::string filename = "..\\data\\Image\\" + std::to_string(i + 1) + ".jpg";
+			cv::vconcat(loadImage(filename), canvas, canvas);
 
-			std::string filename = "..\\db\\Image\\" + std::to_string(i + 1) + ".jpg";
-			cv::vconcat(canvas, loadImage(filename), canvas);
+			std::string str2 = "Reference, FPS " + std::to_string(fps) + "s";
+			cv::putText(canvas, str2, cv::Point(m_input.m_leftImg.cols * 2 / 3.f, 45), cv::HersheyFonts(), 1, cv::Scalar(0, 255, 0), 2);
 
 			int _size = _feOutput.m_leftKp.size();
 			std::cout << _size << std::endl;
@@ -277,22 +239,100 @@ void Stereo::run()
 				cv::circle(canvas, pt2, 3, color);
 				cv::line(canvas, pt1, pt2, color);
 			}
-			cv::resize(canvas, canvas, cv::Size(640, 480));
+			//cv::resize(canvas, canvas, cv::Size(640, 480));
 			cv::imshow("Canvas", canvas);
 		}
 	}
 	
+	if (1)
+	{
+		int dbSize = m_vecDB.size();
+		if (dbSize <= 0)
+			return;
+
+		for (int i = 0; i < dbSize; i++)
+		{
+			FeatureExtractor _fe;
+			_fe.featureMatching(m_vecDB.at(i).m_vecKeyPoint, m_output.m_KeyPoint, m_vecDB.at(i).m_vecDescriptor, m_output.m_Descriptor);
+			FeatureExtractor::Output _feOutput;
+			_feOutput = _fe.getOutput();
+
+			// draw matching line
+			std::vector<cv::Point3f> objectPoints;
+			std::vector<cv::Point2f> imagePoints;
+
+			for (int j = 0; j < _feOutput.m_leftKp.size(); j++)
+			{
+				objectPoints.push_back(
+					cv::Point3f(
+						(float)m_vecDB.at(i).m_vecWorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[0],
+						(float)m_vecDB.at(i).m_vecWorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[1],
+						(float)m_vecDB.at(i).m_vecWorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[2]
+					));
+				imagePoints.push_back(m_output.m_KeyPoint.at(_feOutput.m_mappingIdx2.at(j)).pt);
+			}
+			
+			cv::Mat rvec, tvec;
+			try
+			{
+				cv::solvePnPRansac(objectPoints, imagePoints, m_calibOutput.K1, m_calibOutput.distCoeffs1, rvec, tvec, false, 100);
+			}
+			catch (const std::exception&)
+			{
+				continue;
+			}
+
+			cv::Mat R;
+			cv::Rodrigues(rvec, R);
+
+			cv::Mat R_inv = R.inv();
+			cv::Mat P = -R_inv*tvec;
+
+			double* p = (double*)P.data;
+			printf("x = %lf, y = %lf, z = %lf\n", p[0], p[1], p[2]);
+
+			std::cout << m_calibOutput.K1 << std::endl;
+			std::cout << R << std::endl;
+			std::cout << tvec << std::endl;
+			cv::Affine3d affine(R_inv, P);
+			window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(cv::Matx33d(m_calibOutput.K1), 1000.0, cv::viz::Color::green()), affine);
+
+			// time measure
+			time = getTickCount() - time;
+			double fps = (double)time / getTickFrequency() / 1000.0;
+
+			//// Visualize
+			cv::Mat canvas;
+			cv::hconcat(m_input.m_leftImg, m_input.m_rightImg, canvas);
+
+			std::string filename = "..\\data\\Image\\" + std::to_string(i + 1) + ".jpg";
+			cv::vconcat(loadImage(filename), canvas, canvas);
+
+			std::string str2 = "Reference, FPS " + std::to_string(fps) + "ms";
+			cv::putText(canvas, str2, cv::Point(m_input.m_leftImg.cols * 2 / 3.f, 45), cv::HersheyFonts(), 1, cv::Scalar(0, 255, 0), 2);
+
+			int _size = _feOutput.m_leftKp.size();
+			std::cout << _size << std::endl;
+			std::vector<cv::Vec3b> _colorMap = _fe.colorMapping(_size);
+			for (int _i = 0; _i < _size; _i++)
+			{
+				cv::Point pt1 = cv::Point(_feOutput.m_leftKp.at(_i).pt.x + 0.5f, _feOutput.m_leftKp.at(_i).pt.y + 0.5f);
+				cv::Point pt2 = cv::Point(_feOutput.m_rightKp.at(_i).pt.x + 0.5f, _feOutput.m_rightKp.at(_i).pt.y + 480.5f);
+				cv::Scalar color = cv::Scalar(_colorMap.at(_i).val[0], _colorMap.at(_i).val[1], _colorMap.at(_i).val[2]);
+				cv::circle(canvas, pt1, 3, color);
+				cv::circle(canvas, pt2, 3, color);
+				cv::line(canvas, pt1, pt2, color);
+			}
+			cv::resize(canvas, canvas, Size(canvas.cols*2/3.f, canvas.rows*2/3.f));
+			cv::imshow("Canvas", canvas);
+		}
+	}
 	cv::waitKey(15);
 	window.spinOnce(15, true);
 	window.removeAllWidgets();
 }
 
 void Stereo::prevRun() {
-	if (!readCam()) {
-		printf("cameras is not opened\n");
-		return;
-	}
-
 	FeatureExtractor::Input feInput;
 	feInput.m_LeftImg = m_input.m_leftImg;
 	feInput.m_RightImg = m_input.m_rightImg;
@@ -387,6 +427,13 @@ void Stereo::prevRun() {
 
 bool Stereo::save(char* dbPath)
 {
+	std::ofstream log("..\\data\\log\\depth.txt");
+	for(int i=0;i<m_vecDB.size();i++)
+		for (int j = 0; j < m_vecDB.at(i).m_vecWorldCoord.size(); j++) {
+			log << m_vecDB.at(i).m_vecWorldCoord.at(j) << "\n";
+		}
+	log.close();
+
 	std::ofstream DBsaver(dbPath, std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
 	if (!DBsaver.is_open())
 	{
@@ -524,29 +571,60 @@ bool Stereo::load(char * dbPath)
 
 void Stereo::estimateRigid3D(std::vector<cv::Vec3f>& pt1, std::vector<cv::Vec3f>& pt2, cv::Matx<double, 3, 3>& rot, cv::Matx<double, 3, 1>& tran, double* error)
 {
+	
+	window1.showWidget("Coordinate Widget1", cv::viz::WCoordinateSystem(1000.0));
+
 	// ref : http://nghiaho.com/?page_id=671
 	int size = std::min(pt1.size(), pt2.size());
 
+	cv::Mat inliers, _affine3d;
+	cv::estimateAffine3D(pt1, pt2, _affine3d, inliers, 3.0);
+	std::cout << inliers << std::endl;
 	// finding the centroids
 	std::vector<cv::Mat> point1, point2;
 	for (int i = 0; i < size; i++)
 	{
-		cv::Mat tmp1(3, 1, CV_64FC1);
-		tmp1.at<double>(0, 0) = pt1.at(i).val[0];
-		tmp1.at<double>(1, 0) = pt1.at(i).val[1];
-		tmp1.at<double>(2, 0) = pt1.at(i).val[2];
-		cv::Mat tmp2(3, 1, CV_64FC1);
-		tmp2.at<double>(0, 0) = pt2.at(i).val[0];
-		tmp2.at<double>(1, 0) = pt2.at(i).val[1];
-		tmp2.at<double>(2, 0) = pt2.at(i).val[2];
+		if (0) {
+			if (inliers.at<unsigned char>(i, 0))
+			{
+				int idx = (int)point1.size();
 
-		point1.push_back(tmp1);
-		point2.push_back(tmp2);
+				cv::Mat tmp1(3, 1, CV_64FC1);
+				tmp1.at<double>(0, 0) = pt1.at(i).val[0];
+				tmp1.at<double>(1, 0) = pt1.at(i).val[1];
+				tmp1.at<double>(2, 0) = pt1.at(i).val[2];
+				cv::Mat tmp2(3, 1, CV_64FC1);
+				tmp2.at<double>(0, 0) = pt2.at(i).val[0];
+				tmp2.at<double>(1, 0) = pt2.at(i).val[1];
+				tmp2.at<double>(2, 0) = pt2.at(i).val[2];
+
+				point1.push_back(tmp1);
+				point2.push_back(tmp2);
+			}
+		}
+		else
+		{
+			cv::Mat tmp1(3, 1, CV_64FC1);
+			tmp1.at<double>(0, 0) = pt1.at(i).val[0];
+			tmp1.at<double>(1, 0) = pt1.at(i).val[1];
+			tmp1.at<double>(2, 0) = pt1.at(i).val[2];
+			cv::Mat tmp2(3, 1, CV_64FC1);
+			tmp2.at<double>(0, 0) = pt2.at(i).val[0];
+			tmp2.at<double>(1, 0) = pt2.at(i).val[1];
+			tmp2.at<double>(2, 0) = pt2.at(i).val[2];
+
+			point1.push_back(tmp1);
+			point2.push_back(tmp2);
+		}
+		
+
+		
 	}
 
 	cv::Mat cent1(3, 1, CV_64FC1, cv::Scalar::all(0.0));
 	cv::Mat cent2(3, 1, CV_64FC1, cv::Scalar::all(0.0));
 	
+	size = point1.size();
 	for (int i = 0; i < size; i++)
 	{
 		cent1 += point1.at(i);
@@ -559,10 +637,30 @@ void Stereo::estimateRigid3D(std::vector<cv::Vec3f>& pt1, std::vector<cv::Vec3f>
 	// re-centre both dataset so that both centroids are at the origin
 	cv::Mat A(3, 3, CV_64FC1, cv::Scalar::all(0.0));
 
-	for (int i = 0; i < size; i++)
+	cv::Mat zero_mean_point1, zero_mean_point2;
+	if (0)
 	{
-		A += (point1.at(i) - cent1) * (point2.at(i) - cent2).t();
+		for (int i = 0; i < size; i++)
+		{
+			A += (point1.at(i) - cent1) * (point2.at(i) - cent2).t();
+		}
 	}
+	else
+	{
+
+		for (int i = 0; i < size; i++)
+		{
+			cv::Mat temp_zero_mean_point1 = point1.at(i) - cent1;
+			cv::Mat temp_zero_mean_point2 = point2.at(i) - cent2;
+
+			zero_mean_point1.push_back(temp_zero_mean_point1.t());
+			zero_mean_point2.push_back(temp_zero_mean_point2.t());
+		}
+
+		A = zero_mean_point1.t() * zero_mean_point2;
+	}
+
+
 
 	cv::Mat u, vt, w;
 	cv::SVD svd;
@@ -573,11 +671,12 @@ void Stereo::estimateRigid3D(std::vector<cv::Vec3f>& pt1, std::vector<cv::Vec3f>
 	std::cout << "u\n" << u << std::endl << std::endl;
 	std::cout << "vt\n" << vt << std::endl << std::endl;
 
-	cv::Mat R = vt.t() * u.t();
+	cv::Mat R = u*vt;
 	if (cv::determinant(R) < 0) {
 		vt.row(2) *= -1;
-		R = vt.t() * u.t();
+		R = u*vt;
 	}
+	cv::transpose(R, R);
 	
 	//// finding T
 	cv::Mat T = -R * cent1 + cent2;
@@ -594,6 +693,29 @@ void Stereo::estimateRigid3D(std::vector<cv::Vec3f>& pt1, std::vector<cv::Vec3f>
 	if (error != nullptr)
 		*error = err;
 
+	std::vector<cv::Vec3d>  _pt1, _pt2;
+	std::string str;
+	for (int i = 0; i < size; i++)
+	{
+		cv::Mat tt1 = zero_mean_point1.row(i).t();
+		_pt1.push_back(Vec3d(tt1));
+		cv::Mat tt2 = R.t() * zero_mean_point2.row(i).t();
+		_pt2.push_back(Vec3d(tt2));
+		
+		cv::viz::WLine lw(_pt1.at(i), _pt2.at(i));
+		str = "Line Widget " + std::to_string(i);
+		window1.showWidget(str, lw);
+	}
+	cv::viz::WCloud _wc1(_pt1, cv::viz::Color::red());
+	_wc1.setRenderingProperty(cv::viz::POINT_SIZE, 2);
+	cv::viz::WCloud _wc2(_pt2, cv::viz::Color::yellow());
+	_wc2.setRenderingProperty(cv::viz::POINT_SIZE, 2);
+	window1.showWidget("Cloud1", _wc1);
+	window1.showWidget("Cloud2", _wc2);
+	window1.showWidget("Grid Widget1", cv::viz::WGrid(cv::Vec<int, 2>::all(20), cv::Vec<double, 2>::all((1000.0))), cv::Affine3d(cv::Vec3d(CV_PI / 2.0, 0, 0), cv::Vec3d()));
+	
+	
+	window1.spinOnce(15, true); window1.removeAllWidgets();
 }
 void Stereo::estimateRigid3D(std::vector<cv::Point3f>& pt1, std::vector<cv::Point3f>& pt2, cv::Matx<double, 3, 3>& rot, cv::Matx<double, 3, 1>& tran, double* error)
 {
@@ -617,7 +739,7 @@ void Stereo::keyframe()
 
 	m_vecDB.push_back(db);
 
-	std::string filename = "..\\db\\Image\\" + std::to_string(m_vecDB.size()) + ".jpg";
+	std::string filename = "..\\data\\Image\\" + std::to_string(m_vecDB.size()) + ".jpg";
 	saveImage(filename);
 	
 }
@@ -632,4 +754,33 @@ void Stereo::saveImage(std::string fileName)
 cv::Mat Stereo::loadImage(std::string fileName)
 {
 	return cv::imread(fileName);
+}
+
+void Stereo::setInput(const Input input)
+{
+	m_input.m_leftImg = input.m_leftImg;
+	m_input.m_rightImg = input.m_rightImg;
+	m_input.m_mode = input.m_mode;
+}
+
+Stereo::Output Stereo::getOutput() const
+{
+	return m_output;
+}
+
+void Stereo::setCalibOutput(const CalibOutput output)
+{
+	m_calibOutput.distCoeffs1 = output.distCoeffs1;
+	m_calibOutput.distCoeffs2 = output.distCoeffs2;
+	m_calibOutput.E = output.E;
+	m_calibOutput.F = output.F;
+	m_calibOutput.K1 = output.K1;
+	m_calibOutput.K2 = output.K2;
+	m_calibOutput.P1 = output.P1;
+	m_calibOutput.P2 = output.P2;
+	m_calibOutput.Q = output.Q;
+	m_calibOutput.R = output.R;
+	m_calibOutput.R1 = output.R1;
+	m_calibOutput.R2 = output.R2;
+	m_calibOutput.T = output.T;
 }

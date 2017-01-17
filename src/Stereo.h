@@ -11,6 +11,8 @@
 #include "StereoCalibration.h"
 #include "FeatureExtractor.h"
 
+typedef StereoCalibration::Output CalibOutput;
+
 class Stereo
 {
 public:
@@ -41,6 +43,7 @@ public:
 private:
 	Input m_input;
 	Output m_output;
+	CalibOutput m_calibOutput;
 	std::vector<DB> m_vecDB;
 
 	FeatureExtractor m_feature;
@@ -58,7 +61,8 @@ private:
 	double k2;
 	double p1;
 	double p2;
-
+	cv::Matx33d K;
+	cv::viz::Viz3d window1;
 	// visualize with viz module
 	cv::viz::Viz3d window;
 
@@ -69,19 +73,27 @@ public:
 	int m_mode = M_NULL;
 	Stereo();
 	~Stereo();
-	bool openCam();
-	bool readCam();
-	void caculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, std::vector<cv::Vec3f>& dst);
+
+	inline void caculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, std::vector<cv::Vec3f>& dst)
+	{
+		std::vector<float> disparity;
+		caculateDepth(kp1, kp2, dst, disparity);
+	}
+	void caculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, std::vector<cv::Vec3f>& dst, std::vector<float>& disparity);
 	void run();
 	void prevRun();
 	bool save(char * dbPath);
 	bool load(char * dbPath);
-	static void estimateRigid3D(std::vector<cv::Vec3f>& pt1, std::vector<cv::Vec3f>& pt2, cv::Matx<double, 3, 3>& rot, cv::Matx<double, 3, 1>& tran, double * error = nullptr);
-	static void estimateRigid3D(std::vector<cv::Point3f>& pt1, std::vector<cv::Point3f>& pt2, cv::Matx<double, 3, 3>& rot, cv::Matx<double, 3, 1>& tran, double* error = nullptr);
+	void estimateRigid3D(std::vector<cv::Vec3f>& pt1, std::vector<cv::Vec3f>& pt2, cv::Matx<double, 3, 3>& rot, cv::Matx<double, 3, 1>& tran, double * error = nullptr);
+	void estimateRigid3D(std::vector<cv::Point3f>& pt1, std::vector<cv::Point3f>& pt2, cv::Matx<double, 3, 3>& rot, cv::Matx<double, 3, 1>& tran, double* error = nullptr);
 	//void setInput(Stereo::Input input);
 	
 	void keyframe();
 	void saveImage(std::string fileName);
 	cv::Mat loadImage(std::string fileName);
+
+	void setInput(const Input input);
+	Output getOutput() const;
+	void setCalibOutput(const CalibOutput output);
 };
 
