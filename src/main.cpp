@@ -43,15 +43,16 @@ int main(int argc, char** argv)
 	FeatureExtractor fe;
 	Stereo stereo;
 	
-	if (stereoCalib.LoadCalibrationData("..\\data\\camera\\")) {
+	/*if (stereoCalib.LoadCalibrationData("..\\data\\camera\\")) {
 		mode = UNDISTORTION;
 		stereo.setCalibOutput(stereoCalib.getOutput());
-	}
+	}*/
 
 	// main loop
 	while (1)
 	{
 		Stereo::Input stInput;
+		mode = _NULL;
 		if (readCam(cap, img))
 		{
 			if (mode == UNDISTORTION)

@@ -25,6 +25,7 @@ public:
 		cv::Mat m_leftImg;
 		cv::Mat m_rightImg;
 		int m_mode;
+		CalibOutput m_calibOutput;
 	}Input;
 
 	typedef struct _stereo_database
@@ -32,6 +33,7 @@ public:
 		std::vector<cv::KeyPoint> m_vecKeyPoint;		// keypoint
 		cv::Mat m_vecDescriptor;						// Descriptor
 		std::vector<cv::Vec3f> m_vecWorldCoord;			// 3D coordinates
+		cv::Mat R, T;									// Rotation, Translation Matrix
 	}DB;
 
 	typedef struct _stereo_output
@@ -39,11 +41,11 @@ public:
 		std::vector<cv::KeyPoint> m_KeyPoint;
 		cv::Mat m_Descriptor;
 		std::vector<cv::Vec3f> m_WorldCoord;
+		cv::Mat R, T;
 	}Output;
 private:
 	Input m_input;
 	Output m_output;
-	CalibOutput m_calibOutput;
 	std::vector<DB> m_vecDB;
 
 	FeatureExtractor m_feature;
@@ -93,6 +95,7 @@ public:
 	cv::Mat loadImage(std::string fileName);
 
 	void setInput(const Input input);
+	void setInput(const Input input, const CalibOutput calibOutput);
 	Output getOutput() const;
 	void setCalibOutput(const CalibOutput output);
 };

@@ -238,7 +238,7 @@ void FeatureExtractor::run()
 	}
 
 	time = cv::getTickCount() - time;
-	double fps = (double)time / cv::getTickFrequency() / 1000.0;
+	double fps = (double)time / cv::getTickFrequency() * 1000.0;
 
 	cv::Mat canvas;
 	cv::hconcat(m_input.m_LeftImg, m_input.m_RightImg, canvas);

@@ -228,7 +228,6 @@ void Stereo::run()
 			cv::putText(canvas, str2, cv::Point(m_input.m_leftImg.cols * 2 / 3.f, 45), cv::HersheyFonts(), 1, cv::Scalar(0, 255, 0), 2);
 
 			int _size = _feOutput.m_leftKp.size();
-			std::cout << _size << std::endl;
 			std::vector<cv::Vec3b> _colorMap = _fe.colorMapping(_size);
 			for (int _i = 0; _i < _size; _i++)
 			{
@@ -244,88 +243,87 @@ void Stereo::run()
 		}
 	}
 	
+	// map exploration
 	if (1)
 	{
 		int dbSize = m_vecDB.size();
 		if (dbSize <= 0)
-			return;
-
-		for (int i = 0; i < dbSize; i++)
 		{
-			FeatureExtractor _fe;
-			_fe.featureMatching(m_vecDB.at(i).m_vecKeyPoint, m_output.m_KeyPoint, m_vecDB.at(i).m_vecDescriptor, m_output.m_Descriptor);
-			FeatureExtractor::Output _feOutput;
-			_feOutput = _fe.getOutput();
-
-			// draw matching line
-			std::vector<cv::Point3f> objectPoints;
-			std::vector<cv::Point2f> imagePoints;
-
-			for (int j = 0; j < _feOutput.m_leftKp.size(); j++)
-			{
-				objectPoints.push_back(
-					cv::Point3f(
-						(float)m_vecDB.at(i).m_vecWorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[0],
-						(float)m_vecDB.at(i).m_vecWorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[1],
-						(float)m_vecDB.at(i).m_vecWorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[2]
-					));
-				imagePoints.push_back(m_output.m_KeyPoint.at(_feOutput.m_mappingIdx2.at(j)).pt);
-			}
-			
-			cv::Mat rvec, tvec;
-			try
-			{
-				cv::solvePnPRansac(objectPoints, imagePoints, m_calibOutput.K1, m_calibOutput.distCoeffs1, rvec, tvec, false, 100);
-			}
-			catch (const std::exception&)
-			{
-				continue;
-			}
-
-			cv::Mat R;
-			cv::Rodrigues(rvec, R);
-
-			cv::Mat R_inv = R.inv();
-			cv::Mat P = -R_inv*tvec;
-
-			double* p = (double*)P.data;
-			printf("x = %lf, y = %lf, z = %lf\n", p[0], p[1], p[2]);
-
-			std::cout << m_calibOutput.K1 << std::endl;
-			std::cout << R << std::endl;
-			std::cout << tvec << std::endl;
-			cv::Affine3d affine(R_inv, P);
-			window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(cv::Matx33d(m_calibOutput.K1), 1000.0, cv::viz::Color::green()), affine);
-
-			// time measure
-			time = getTickCount() - time;
-			double fps = (double)time / getTickFrequency() / 1000.0;
-
-			//// Visualize
-			cv::Mat canvas;
-			cv::hconcat(m_input.m_leftImg, m_input.m_rightImg, canvas);
-
-			std::string filename = "..\\data\\Image\\" + std::to_string(i + 1) + ".jpg";
-			cv::vconcat(loadImage(filename), canvas, canvas);
-
-			std::string str2 = "Reference, FPS " + std::to_string(fps) + "ms";
-			cv::putText(canvas, str2, cv::Point(m_input.m_leftImg.cols * 2 / 3.f, 45), cv::HersheyFonts(), 1, cv::Scalar(0, 255, 0), 2);
-
-			int _size = _feOutput.m_leftKp.size();
-			std::cout << _size << std::endl;
-			std::vector<cv::Vec3b> _colorMap = _fe.colorMapping(_size);
-			for (int _i = 0; _i < _size; _i++)
-			{
-				cv::Point pt1 = cv::Point(_feOutput.m_leftKp.at(_i).pt.x + 0.5f, _feOutput.m_leftKp.at(_i).pt.y + 0.5f);
-				cv::Point pt2 = cv::Point(_feOutput.m_rightKp.at(_i).pt.x + 0.5f, _feOutput.m_rightKp.at(_i).pt.y + 480.5f);
-				cv::Scalar color = cv::Scalar(_colorMap.at(_i).val[0], _colorMap.at(_i).val[1], _colorMap.at(_i).val[2]);
-				cv::circle(canvas, pt1, 3, color);
-				cv::circle(canvas, pt2, 3, color);
-				cv::line(canvas, pt1, pt2, color);
-			}
-			cv::resize(canvas, canvas, Size(canvas.cols*2/3.f, canvas.rows*2/3.f));
-			cv::imshow("Canvas", canvas);
+			return;
 		}
+		int prevIdx = dbSize - 1;
+				
+		FeatureExtractor _fe;
+		_fe.featureMatching(m_vecDB.at(prevIdx).m_vecKeyPoint, m_output.m_KeyPoint, m_vecDB.at(prevIdx).m_vecDescriptor, m_output.m_Descriptor);
+		FeatureExtractor::Output _feOutput;
+		_feOutput = _fe.getOutput();
+
+		// caculate camera pose to 3D - 2D
+		std::vector<cv::Point3f> objectPoints;
+		std::vector<cv::Point2f> imagePoints;
+
+		for (int j = 0; j < _feOutput.m_leftKp.size(); j++)
+		{
+			objectPoints.push_back(
+				cv::Point3f(
+					(float)m_vecDB.at(prevIdx).m_vecWorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[0],
+					(float)m_vecDB.at(prevIdx).m_vecWorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[1],
+					(float)m_vecDB.at(prevIdx).m_vecWorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[2]
+				));
+			imagePoints.push_back(m_output.m_KeyPoint.at(_feOutput.m_mappingIdx2.at(j)).pt);
+		}
+			
+		cv::Mat rvec, tvec;
+			
+		cv::Mat zeroDistCoeffs(14, 1, CV_64F, cv::Scalar::all(0.0));
+		try
+		{
+			cv::solvePnPRansac(objectPoints, imagePoints, 
+				/*m_calibOutput.K1*/K, 
+				/*m_calibOutput.distCoeffs1*/zeroDistCoeffs,
+				rvec, tvec, false, 100);
+		}
+		catch (const std::exception&)
+		{
+			return;
+		}
+
+		cv::Mat R;
+		cv::Rodrigues(rvec, R);
+
+		cv::Mat R_inv = R.inv();
+		cv::Mat P = -R_inv*tvec;
+			
+		cv::Affine3d affine(R_inv, P);
+		window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(/*cv::Matx33d(m_calibOutput.K1)*/K, 1000.0, cv::viz::Color::green()), affine);
+
+		// time measure
+		time = getTickCount() - time;
+		double fps = (double)time / getTickFrequency() * 1000.0;
+
+		//// Visualize
+		cv::Mat canvas;
+		cv::hconcat(m_input.m_leftImg, m_input.m_rightImg, canvas);
+
+		std::string filename = "..\\data\\Image\\" + std::to_string(i + 1) + ".jpg";
+		cv::vconcat(loadImage(filename), canvas, canvas);
+
+		std::string str2 = "Reference, FPS " + std::to_string(fps) + "ms";
+		cv::putText(canvas, str2, cv::Point(m_input.m_leftImg.cols * 2 / 3.f, 45), cv::HersheyFonts(), 1, cv::Scalar(0, 255, 0), 2);
+
+		int _size = _feOutput.m_leftKp.size();
+		std::vector<cv::Vec3b> _colorMap = _fe.colorMapping(_size);
+		for (int _i = 0; _i < _size; _i++)
+		{
+			cv::Point pt1 = cv::Point(_feOutput.m_leftKp.at(_i).pt.x + 0.5f, _feOutput.m_leftKp.at(_i).pt.y + 0.5f);
+			cv::Point pt2 = cv::Point(_feOutput.m_rightKp.at(_i).pt.x + 0.5f, _feOutput.m_rightKp.at(_i).pt.y + 480.5f);
+			cv::Scalar color = cv::Scalar(_colorMap.at(_i).val[0], _colorMap.at(_i).val[1], _colorMap.at(_i).val[2]);
+			cv::circle(canvas, pt1, 3, color);
+			cv::circle(canvas, pt2, 3, color);
+			cv::line(canvas, pt1, pt2, color);
+		}
+		cv::resize(canvas, canvas, Size(canvas.cols*2/3.f, canvas.rows*2/3.f));
+		cv::imshow("Canvas", canvas);
 	}
 	cv::waitKey(15);
 	window.spinOnce(15, true);
@@ -579,7 +577,7 @@ void Stereo::estimateRigid3D(std::vector<cv::Vec3f>& pt1, std::vector<cv::Vec3f>
 
 	cv::Mat inliers, _affine3d;
 	cv::estimateAffine3D(pt1, pt2, _affine3d, inliers, 3.0);
-	std::cout << inliers << std::endl;
+	//std::cout << inliers << std::endl;
 	// finding the centroids
 	std::vector<cv::Mat> point1, point2;
 	for (int i = 0; i < size; i++)
@@ -666,10 +664,10 @@ void Stereo::estimateRigid3D(std::vector<cv::Vec3f>& pt1, std::vector<cv::Vec3f>
 	cv::SVD svd;
 	svd.compute(A, w, u, vt);
 
-	std::cout << "A\n" << A << std::endl << std::endl;
-	std::cout << "w\n" << w << std::endl << std::endl;
-	std::cout << "u\n" << u << std::endl << std::endl;
-	std::cout << "vt\n" << vt << std::endl << std::endl;
+	//std::cout << "A\n" << A << std::endl << std::endl;
+	//std::cout << "w\n" << w << std::endl << std::endl;
+	//std::cout << "u\n" << u << std::endl << std::endl;
+	//std::cout << "vt\n" << vt << std::endl << std::endl;
 
 	cv::Mat R = u*vt;
 	if (cv::determinant(R) < 0) {
@@ -763,6 +761,14 @@ void Stereo::setInput(const Input input)
 	m_input.m_mode = input.m_mode;
 }
 
+void Stereo::setInput(const Input input, const CalibOutput calibOutput)
+{
+	m_input.m_leftImg = input.m_leftImg;
+	m_input.m_rightImg = input.m_rightImg;
+	m_input.m_mode = input.m_mode;
+	m_input.m_calibOutput = calibOutput;
+}
+
 Stereo::Output Stereo::getOutput() const
 {
 	return m_output;
@@ -770,17 +776,17 @@ Stereo::Output Stereo::getOutput() const
 
 void Stereo::setCalibOutput(const CalibOutput output)
 {
-	m_calibOutput.distCoeffs1 = output.distCoeffs1;
-	m_calibOutput.distCoeffs2 = output.distCoeffs2;
-	m_calibOutput.E = output.E;
-	m_calibOutput.F = output.F;
-	m_calibOutput.K1 = output.K1;
-	m_calibOutput.K2 = output.K2;
-	m_calibOutput.P1 = output.P1;
-	m_calibOutput.P2 = output.P2;
-	m_calibOutput.Q = output.Q;
-	m_calibOutput.R = output.R;
-	m_calibOutput.R1 = output.R1;
-	m_calibOutput.R2 = output.R2;
-	m_calibOutput.T = output.T;
+	m_input.m_calibOutput.distCoeffs1 = output.distCoeffs1;
+	m_input.m_calibOutput.distCoeffs2 = output.distCoeffs2;
+	m_input.m_calibOutput.E = output.E;
+	m_input.m_calibOutput.F = output.F;
+	m_input.m_calibOutput.K1 = output.K1;
+	m_input.m_calibOutput.K2 = output.K2;
+	m_input.m_calibOutput.P1 = output.P1;
+	m_input.m_calibOutput.P2 = output.P2;
+	m_input.m_calibOutput.Q = output.Q;
+	m_input.m_calibOutput.R = output.R;
+	m_input.m_calibOutput.R1 = output.R1;
+	m_input.m_calibOutput.R2 = output.R2;
+	m_input.m_calibOutput.T = output.T;
 }
