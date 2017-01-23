@@ -158,6 +158,7 @@
     <ClInclude Include="openCV.h" />
     <ClInclude Include="Stereo.h" />
     <ClInclude Include="StereoCalibration.h" />
+    <ClInclude Include="Graph.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

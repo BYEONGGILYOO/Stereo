@@ -102,232 +102,264 @@ void Stereo::run()
 		colorMap.at<cv::Vec3b>(pt) = feOutput.m_color.at(i);
 	}
 	
-	cv::viz::WCloud cw(depth, /*colorMap*/cv::viz::Color::yellow());
-	cw.setRenderingProperty(cv::viz::POINT_SIZE, 2);
+	//cv::viz::WCloud cw(depth, /*colorMap*/cv::viz::Color::yellow());
+	/*cw.setRenderingProperty(cv::viz::POINT_SIZE, 2);
 	window.showWidget("Cloud Widget", cw);
 	window.showWidget("Grid Widget", cv::viz::WGrid(cv::Vec<int, 2>::all(20), cv::Vec<double, 2>::all((1000.0))), cv::Affine3d(cv::Vec3d(CV_PI / 2.0, 0, 0), cv::Vec3d()));
 	window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(cv::Matx33d(fX, 0.0, cX, 0.0, fY, cY, 0.0, 0.0, 1.0), 1000.0, cv::viz::Color::green()));
-	window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(1000.0));
+	window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(1000.0));*/
 
 	m_mode = -1;
-	if (/*m_input.*/m_mode == M_QUERY)
+	//if (/*m_input.*/m_mode == M_QUERY)
+	//{
+	//	int dbSize = m_vecDB.size();
+	//	if (dbSize <= 0)
+	//		return;
+	//	for (int i = 0; i < dbSize; i++)
+	//	{
+	//		// caculate db depth
+	//		std::vector<cv::KeyPoint> dbKP = m_vecDB.at(i).m_KeyPoint;
+	//		cv::Mat dbDepth(m_input.m_leftImg.size(), CV_32FC3, cv::Scalar::all(0));
+	//		for (int j = 0; j < dbKP.size(); j++)
+	//		{
+	//			cv::Point pt = cv::Point((int)(dbKP.at(j).pt.x + 0.5f), (int)(dbKP.at(j).pt.y + 0.5f));
+	//			dbDepth.at<cv::Vec3f>(pt) = m_vecDB.at(i).m_WorldCoord.at(j);
+	//		}
+	//		//dbDepth /= 1000.f;
+	//		cv::viz::WCloud cw2(dbDepth, cv::viz::Color::red());
+	//		cw2.setRenderingProperty(cv::viz::POINT_SIZE, 2);
+	//		window.showWidget("Cloude Widget2", cw2);			
+	//		
+	//		// left db , left query matching
+	//		FeatureExtractor _fe;
+	//		_fe.featureMatching(m_vecDB.at(i).m_KeyPoint, m_output.m_KeyPoint, m_vecDB.at(i).m_Descriptor, m_output.m_Descriptor);
+	//		FeatureExtractor::Output _feOutput;
+	//		_feOutput = _fe.getOutput();
+	//		// draw matching line
+	//		std::vector<cv::Point3f> wpt1, wpt2;
+	//		std::vector<cv::Point3f> temp_wpt1, temp_wpt2;
+	//		std::vector<cv::KeyPoint>::iterator _itr = _feOutput.m_leftKp.begin();
+	//		for (int j = 0; j < _feOutput.m_leftKp.size(); j++)
+	//		{
+	//			wpt1.push_back(
+	//				cv::Point3d(
+	//				(double)m_vecDB.at(i).m_WorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[0],
+	//				(double)m_vecDB.at(i).m_WorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[1],
+	//				(double)m_vecDB.at(i).m_WorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[2]
+	//			));
+	//			wpt2.push_back(
+	//				cv::Point3d(
+	//					(double)m_output.m_WorldCoord.at(_feOutput.m_mappingIdx2.at(j)).val[0],
+	//					(double)m_output.m_WorldCoord.at(_feOutput.m_mappingIdx2.at(j)).val[1],
+	//					(double)m_output.m_WorldCoord.at(_feOutput.m_mappingIdx2.at(j)).val[2]
+	//				));
+	//			/*for (int k = 0; k < m_vecDB.at(i).m_vecKeyPoint.size(); k++)
+	//			{
+	//				if (m_vecDB.at(i).m_vecKeyPoint.at(k).pt == _feOutput.m_leftKp.at(j).pt) {
+	//					wpt1.push_back(
+	//						cv::Point3f(
+	//						(float)m_vecDB.at(i).m_vecWorldCoord.at(k).val[0],
+	//						(float)m_vecDB.at(i).m_vecWorldCoord.at(k).val[1],
+	//						(float)m_vecDB.at(i).m_vecWorldCoord.at(k).val[2])
+	//					);
+	//				}	
+	//			}
+	//			for (int l = 0; l < m_output.m_KeyPoint.size(); l++)
+	//			{
+	//				if (m_output.m_KeyPoint.at(l).pt == _feOutput.m_rightKp.at(j).pt) {
+	//					wpt2.push_back(
+	//						cv::Point3f(
+	//						(float)m_output.m_WorldCoord.at(l).val[0],
+	//						(float)m_output.m_WorldCoord.at(l).val[1] ,
+	//						(float)m_output.m_WorldCoord.at(l).val[2] )
+	//					);
+	//				}
+	//			}*/
+	//		}
+	//		std::vector<std::tuple<float, cv::Point3f, cv::Point3f>> point3D;
+	//		
+	//		std::string str;			
+	//		for (int j = 0; j < wpt1.size(); j++) {
+	//			cv::viz::WLine lw(wpt1.at(j), wpt2.at(j));
+	//			str = "Line Widget" +std::to_string(j);
+	//			window.showWidget(str, lw);
+	//			point3D.push_back(make_tuple(std::sqrtf(std::pow(wpt1.at(j).x - wpt2.at(j).x, 2) + std::pow(wpt1.at(j).y - wpt2.at(j).y, 2) + std::pow(wpt1.at(j).z - wpt2.at(j).z, 2))
+	//				, wpt1.at(j), wpt2.at(j)));
+	//		}
+	//		
+	//		//std::sort(point3D.begin(), point3D.end(), [](const std::tuple<float, cv::Point3f, cv::Point3f>& a, const std::tuple<float, cv::Point3f, cv::Point3f>& b)->bool {
+	//		//	return std::get<0>(a) < std::get<0>(b);
+	//		//});
+	//		//
+	//		//std::vector<cv::Point3f> new1, new2;
+	//		//for (int _i = 0; _i < point3D.size(); _i++)
+	//		//{
+	//		//	new1.push_back(get<1>(point3D.at(_i)));
+	//		//	new2.push_back(get<2>(point3D.at(_i)));
+	//		//}
+	//		//// camera pose			
+	//		//cv::Matx<double, 3, 3> rot;
+	//		//cv::Matx<double, 3, 1> tran;
+	//		//estimateRigid3D(wpt1, wpt2, rot, tran);
+	//		//std::cout << tran << std::endl;
+	//		//Affine3d affine(rot, cv::Vec3d(tran.row(0).val[0], tran.row(1).val[0], tran.row(2).val[0]));
+	//		//
+	//		//std::cout << affine.translation() << std::endl << std::endl;
+	//		//window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(K, 1000.0, cv::viz::Color::green()), Affine3d(affine.rotation(), cv::Vec3d()));
+	//		time = getTickCount() - time;
+	//		double fps = (double)time / getTickFrequency();
+	//		
+	//		//// Visualize
+	//		cv::Mat canvas;
+	//		cv::hconcat(m_input.m_leftImg, m_input.m_rightImg, canvas);
+	//				
+	//		std::string filename = "..\\data\\Image\\" + std::to_string(i + 1) + ".jpg";
+	//		cv::vconcat(loadImage(filename), canvas, canvas);
+	//		std::string str2 = "Reference, FPS " + std::to_string(fps) + "s";
+	//		cv::putText(canvas, str2, cv::Point(m_input.m_leftImg.cols * 2 / 3.f, 45), cv::HersheyFonts(), 1, cv::Scalar(0, 255, 0), 2);
+	//		int _size = _feOutput.m_leftKp.size();
+	//		std::vector<cv::Vec3b> _colorMap = _fe.colorMapping(_size);
+	//		for (int _i = 0; _i < _size; _i++)
+	//		{
+	//			cv::Point pt1 = cv::Point(_feOutput.m_leftKp.at(_i).pt.x + 0.5f, _feOutput.m_leftKp.at(_i).pt.y + 0.5f);
+	//			cv::Point pt2 = cv::Point(_feOutput.m_rightKp.at(_i).pt.x + 0.5f, _feOutput.m_rightKp.at(_i).pt.y + 480.5f);
+	//			cv::Scalar color = cv::Scalar(_colorMap.at(_i).val[0], _colorMap.at(_i).val[1], _colorMap.at(_i).val[2]);
+	//			cv::circle(canvas, pt1, 3, color);
+	//			cv::circle(canvas, pt2, 3, color);
+	//			cv::line(canvas, pt1, pt2, color);
+	//		}
+	//		//cv::resize(canvas, canvas, cv::Size(640, 480));
+	//		cv::imshow("Canvas", canvas);
+	//	}
+	//}
+	
+	if (1)
 	{
-		int dbSize = m_vecDB.size();
-		if (dbSize <= 0)
-			return;
-
-		for (int i = 0; i < dbSize; i++)
+		int dbSize = m_vertices.size();
+		if (dbSize != 0)
 		{
-			// caculate db depth
-			std::vector<cv::KeyPoint> dbKP = m_vecDB.at(i).m_vecKeyPoint;
-
-			cv::Mat dbDepth(m_input.m_leftImg.size(), CV_32FC3, cv::Scalar::all(0));
-			for (int j = 0; j < dbKP.size(); j++)
-			{
-				cv::Point pt = cv::Point((int)(dbKP.at(j).pt.x + 0.5f), (int)(dbKP.at(j).pt.y + 0.5f));
-				dbDepth.at<cv::Vec3f>(pt) = m_vecDB.at(i).m_vecWorldCoord.at(j);
-			}
-			//dbDepth /= 1000.f;
-			cv::viz::WCloud cw2(dbDepth, cv::viz::Color::red());
-			cw2.setRenderingProperty(cv::viz::POINT_SIZE, 2);
-			window.showWidget("Cloude Widget2", cw2);			
+			Data data = m_vertices.at(dbSize - 1)->getData();			
 			
-			// left db , left query matching
 			FeatureExtractor _fe;
-			_fe.featureMatching(m_vecDB.at(i).m_vecKeyPoint, m_output.m_KeyPoint, m_vecDB.at(i).m_vecDescriptor, m_output.m_Descriptor);
-			FeatureExtractor::Output _feOutput;
-			_feOutput = _fe.getOutput();
+			_fe.featureMatching(data.m_KeyPoint, m_output.m_KeyPoint, data.m_Descriptor, m_output.m_Descriptor);
+			FeatureExtractor::Output _feOutput = _fe.getOutput();
 
-			// draw matching line
-			std::vector<cv::Point3f> wpt1, wpt2;
-			std::vector<cv::Point3f> temp_wpt1, temp_wpt2;
-			std::vector<cv::KeyPoint>::iterator _itr = _feOutput.m_leftKp.begin();
+			// caculate camera pose to 3D - 2D
+			std::vector<cv::Point3f> objectPoints;
+			std::vector<cv::Point2f> imagePoints;
 
 			for (int j = 0; j < _feOutput.m_leftKp.size(); j++)
 			{
-				wpt1.push_back(
-					cv::Point3d(
-					(double)m_vecDB.at(i).m_vecWorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[0],
-					(double)m_vecDB.at(i).m_vecWorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[1],
-					(double)m_vecDB.at(i).m_vecWorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[2]
-				));
-				wpt2.push_back(
-					cv::Point3d(
-						(double)m_output.m_WorldCoord.at(_feOutput.m_mappingIdx2.at(j)).val[0],
-						(double)m_output.m_WorldCoord.at(_feOutput.m_mappingIdx2.at(j)).val[1],
-						(double)m_output.m_WorldCoord.at(_feOutput.m_mappingIdx2.at(j)).val[2]
+				objectPoints.push_back(
+					cv::Point3f(
+					(float)data.m_WorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[0],
+						(float)data.m_WorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[1],
+						(float)data.m_WorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[2]
 					));
-
-				/*for (int k = 0; k < m_vecDB.at(i).m_vecKeyPoint.size(); k++)
-				{
-					if (m_vecDB.at(i).m_vecKeyPoint.at(k).pt == _feOutput.m_leftKp.at(j).pt) {
-						wpt1.push_back(
-							cv::Point3f(
-							(float)m_vecDB.at(i).m_vecWorldCoord.at(k).val[0],
-							(float)m_vecDB.at(i).m_vecWorldCoord.at(k).val[1],
-							(float)m_vecDB.at(i).m_vecWorldCoord.at(k).val[2])
-						);
-					}	
-				}
-				for (int l = 0; l < m_output.m_KeyPoint.size(); l++)
-				{
-					if (m_output.m_KeyPoint.at(l).pt == _feOutput.m_rightKp.at(j).pt) {
-						wpt2.push_back(
-							cv::Point3f(
-							(float)m_output.m_WorldCoord.at(l).val[0],
-							(float)m_output.m_WorldCoord.at(l).val[1] ,
-							(float)m_output.m_WorldCoord.at(l).val[2] )
-						);
-					}
-				}*/
+				imagePoints.push_back(m_output.m_KeyPoint.at(_feOutput.m_mappingIdx2.at(j)).pt);
 			}
 
-			std::vector<std::tuple<float, cv::Point3f, cv::Point3f>> point3D;
-			
-			std::string str;			
-			for (int j = 0; j < wpt1.size(); j++) {
-				cv::viz::WLine lw(wpt1.at(j), wpt2.at(j));
-				str = "Line Widget" +std::to_string(j);
-				window.showWidget(str, lw);
-				point3D.push_back(make_tuple(std::sqrtf(std::pow(wpt1.at(j).x - wpt2.at(j).x, 2) + std::pow(wpt1.at(j).y - wpt2.at(j).y, 2) + std::pow(wpt1.at(j).z - wpt2.at(j).z, 2))
-					, wpt1.at(j), wpt2.at(j)));
-			}
-			
-			//std::sort(point3D.begin(), point3D.end(), [](const std::tuple<float, cv::Point3f, cv::Point3f>& a, const std::tuple<float, cv::Point3f, cv::Point3f>& b)->bool {
-			//	return std::get<0>(a) < std::get<0>(b);
-			//});
-			//
-			//std::vector<cv::Point3f> new1, new2;
-			//for (int _i = 0; _i < point3D.size(); _i++)
-			//{
-			//	new1.push_back(get<1>(point3D.at(_i)));
-			//	new2.push_back(get<2>(point3D.at(_i)));
-			//}
+			cv::Mat rvec, tvec;
 
-			//// camera pose			
-			//cv::Matx<double, 3, 3> rot;
-			//cv::Matx<double, 3, 1> tran;
-			//estimateRigid3D(wpt1, wpt2, rot, tran);
-			//std::cout << tran << std::endl;
-			//Affine3d affine(rot, cv::Vec3d(tran.row(0).val[0], tran.row(1).val[0], tran.row(2).val[0]));
-			//
-			//std::cout << affine.translation() << std::endl << std::endl;
-			//window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(K, 1000.0, cv::viz::Color::green()), Affine3d(affine.rotation(), cv::Vec3d()));
-
-			time = getTickCount() - time;
-			double fps = (double)time / getTickFrequency();
-			
-			//// Visualize
-			cv::Mat canvas;
-			cv::hconcat(m_input.m_leftImg, m_input.m_rightImg, canvas);
-					
-			std::string filename = "..\\data\\Image\\" + std::to_string(i + 1) + ".jpg";
-			cv::vconcat(loadImage(filename), canvas, canvas);
-
-			std::string str2 = "Reference, FPS " + std::to_string(fps) + "s";
-			cv::putText(canvas, str2, cv::Point(m_input.m_leftImg.cols * 2 / 3.f, 45), cv::HersheyFonts(), 1, cv::Scalar(0, 255, 0), 2);
-
-			int _size = _feOutput.m_leftKp.size();
-			std::vector<cv::Vec3b> _colorMap = _fe.colorMapping(_size);
-			for (int _i = 0; _i < _size; _i++)
+			cv::Mat zeroDistCoeffs(14, 1, CV_64F, cv::Scalar::all(0.0));
+			try
 			{
-				cv::Point pt1 = cv::Point(_feOutput.m_leftKp.at(_i).pt.x + 0.5f, _feOutput.m_leftKp.at(_i).pt.y + 0.5f);
-				cv::Point pt2 = cv::Point(_feOutput.m_rightKp.at(_i).pt.x + 0.5f, _feOutput.m_rightKp.at(_i).pt.y + 480.5f);
-				cv::Scalar color = cv::Scalar(_colorMap.at(_i).val[0], _colorMap.at(_i).val[1], _colorMap.at(_i).val[2]);
-				cv::circle(canvas, pt1, 3, color);
-				cv::circle(canvas, pt2, 3, color);
-				cv::line(canvas, pt1, pt2, color);
+				cv::solvePnPRansac(objectPoints, imagePoints,
+					/*m_calibOutput.K1*/K,
+					/*m_calibOutput.distCoeffs1*/zeroDistCoeffs,
+					rvec, tvec, false, 100);
 			}
-			//cv::resize(canvas, canvas, cv::Size(640, 480));
-			cv::imshow("Canvas", canvas);
+			catch (const std::exception&)
+			{
+				return;
+			}
+
+			cv::Mat R;
+			cv::Rodrigues(rvec, R);
+
+			cv::Mat R_inv = R.inv();
+			cv::Mat P = -R_inv*tvec;
+
+			cv::Affine3d affine(R_inv, P);
+			//window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(/*cv::Matx33d(m_calibOutput.K1)*/K, 1000.0, cv::viz::Color::green()), affine);
 		}
 	}
+
+	//if (0)
+	//{
+	//	int dbSize = m_vertices.size();
+	//	if (dbSize <= 0)
+	//	{
+	//		return;
+	//	}
+	//	int prevIdx = dbSize - 1;
+	//			
+	//	FeatureExtractor _fe;
+	//	_fe.featureMatching(m_vecDB.at(prevIdx).m_KeyPoint, m_output.m_KeyPoint, m_vecDB.at(prevIdx).m_Descriptor, m_output.m_Descriptor);
+	//	FeatureExtractor::Output _feOutput;
+	//	_feOutput = _fe.getOutput();
+	//	// caculate camera pose to 3D - 2D
+	//	std::vector<cv::Point3f> objectPoints;
+	//	std::vector<cv::Point2f> imagePoints;
+	//	for (int j = 0; j < _feOutput.m_leftKp.size(); j++)
+	//	{
+	//		objectPoints.push_back(
+	//			cv::Point3f(
+	//				(float)m_vecDB.at(prevIdx).m_WorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[0],
+	//				(float)m_vecDB.at(prevIdx).m_WorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[1],
+	//				(float)m_vecDB.at(prevIdx).m_WorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[2]
+	//			));
+	//		imagePoints.push_back(m_output.m_KeyPoint.at(_feOutput.m_mappingIdx2.at(j)).pt);
+	//	}
+	//		
+	//	cv::Mat rvec, tvec;
+	//		
+	//	cv::Mat zeroDistCoeffs(14, 1, CV_64F, cv::Scalar::all(0.0));
+	//	try
+	//	{
+	//		cv::solvePnPRansac(objectPoints, imagePoints, 
+	//			/*m_calibOutput.K1*/K, 
+	//			/*m_calibOutput.distCoeffs1*/zeroDistCoeffs,
+	//			rvec, tvec, false, 100);
+	//	}
+	//	catch (const std::exception&)
+	//	{
+	//		return;
+	//	}
+	//	cv::Mat R;
+	//	cv::Rodrigues(rvec, R);
+	//	cv::Mat R_inv = R.inv();
+	//	cv::Mat P = -R_inv*tvec;
+	//		
+	//	cv::Affine3d affine(R_inv, P);
+	//	window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(/*cv::Matx33d(m_calibOutput.K1)*/K, 1000.0, cv::viz::Color::green()), affine);
+	//	m_output.R = R_inv.clone();
+	//	m_output.T = P.clone();
+	//	// time measure
+	//	time = getTickCount() - time;
+	//	double fps = (double)time / getTickFrequency() * 1000.0;
+	//	//// Visualize
+	//	cv::Mat canvas;
+	//	cv::hconcat(m_input.m_leftImg, m_input.m_rightImg, canvas);
+	//	std::string filename = "..\\data\\Image\\" + std::to_string(prevIdx + 1) + ".jpg";
+	//	cv::vconcat(loadImage(filename), canvas, canvas);
+	//	std::string str2 = "Reference, FPS " + std::to_string(fps) + "ms";
+	//	cv::putText(canvas, str2, cv::Point(m_input.m_leftImg.cols * 2 / 3.f, 45), cv::HersheyFonts(), 1, cv::Scalar(0, 255, 0), 2);
+	//	int _size = _feOutput.m_leftKp.size();
+	//	std::vector<cv::Vec3b> _colorMap = _fe.colorMapping(_size);
+	//	for (int _i = 0; _i < _size; _i++)
+	//	{
+	//		cv::Point pt1 = cv::Point(_feOutput.m_leftKp.at(_i).pt.x + 0.5f, _feOutput.m_leftKp.at(_i).pt.y + 0.5f);
+	//		cv::Point pt2 = cv::Point(_feOutput.m_rightKp.at(_i).pt.x + 0.5f, _feOutput.m_rightKp.at(_i).pt.y + 480.5f);
+	//		cv::Scalar color = cv::Scalar(_colorMap.at(_i).val[0], _colorMap.at(_i).val[1], _colorMap.at(_i).val[2]);
+	//		cv::circle(canvas, pt1, 3, color);
+	//		cv::circle(canvas, pt2, 3, color);
+	//		cv::line(canvas, pt1, pt2, color);
+	//	}
+	//	cv::resize(canvas, canvas, Size(canvas.cols*2/3.f, canvas.rows*2/3.f));
+	//	cv::imshow("Canvas", canvas);
+	//}
 	
-	// map exploration
-	if (1)
-	{
-		int dbSize = m_vecDB.size();
-		if (dbSize <= 0)
-		{
-			return;
-		}
-		int prevIdx = dbSize - 1;
-				
-		FeatureExtractor _fe;
-		_fe.featureMatching(m_vecDB.at(prevIdx).m_vecKeyPoint, m_output.m_KeyPoint, m_vecDB.at(prevIdx).m_vecDescriptor, m_output.m_Descriptor);
-		FeatureExtractor::Output _feOutput;
-		_feOutput = _fe.getOutput();
-
-		// caculate camera pose to 3D - 2D
-		std::vector<cv::Point3f> objectPoints;
-		std::vector<cv::Point2f> imagePoints;
-
-		for (int j = 0; j < _feOutput.m_leftKp.size(); j++)
-		{
-			objectPoints.push_back(
-				cv::Point3f(
-					(float)m_vecDB.at(prevIdx).m_vecWorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[0],
-					(float)m_vecDB.at(prevIdx).m_vecWorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[1],
-					(float)m_vecDB.at(prevIdx).m_vecWorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[2]
-				));
-			imagePoints.push_back(m_output.m_KeyPoint.at(_feOutput.m_mappingIdx2.at(j)).pt);
-		}
-			
-		cv::Mat rvec, tvec;
-			
-		cv::Mat zeroDistCoeffs(14, 1, CV_64F, cv::Scalar::all(0.0));
-		try
-		{
-			cv::solvePnPRansac(objectPoints, imagePoints, 
-				/*m_calibOutput.K1*/K, 
-				/*m_calibOutput.distCoeffs1*/zeroDistCoeffs,
-				rvec, tvec, false, 100);
-		}
-		catch (const std::exception&)
-		{
-			return;
-		}
-
-		cv::Mat R;
-		cv::Rodrigues(rvec, R);
-
-		cv::Mat R_inv = R.inv();
-		cv::Mat P = -R_inv*tvec;
-			
-		cv::Affine3d affine(R_inv, P);
-		window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(/*cv::Matx33d(m_calibOutput.K1)*/K, 1000.0, cv::viz::Color::green()), affine);
-
-		// time measure
-		time = getTickCount() - time;
-		double fps = (double)time / getTickFrequency() * 1000.0;
-
-		//// Visualize
-		cv::Mat canvas;
-		cv::hconcat(m_input.m_leftImg, m_input.m_rightImg, canvas);
-
-		std::string filename = "..\\data\\Image\\" + std::to_string(i + 1) + ".jpg";
-		cv::vconcat(loadImage(filename), canvas, canvas);
-
-		std::string str2 = "Reference, FPS " + std::to_string(fps) + "ms";
-		cv::putText(canvas, str2, cv::Point(m_input.m_leftImg.cols * 2 / 3.f, 45), cv::HersheyFonts(), 1, cv::Scalar(0, 255, 0), 2);
-
-		int _size = _feOutput.m_leftKp.size();
-		std::vector<cv::Vec3b> _colorMap = _fe.colorMapping(_size);
-		for (int _i = 0; _i < _size; _i++)
-		{
-			cv::Point pt1 = cv::Point(_feOutput.m_leftKp.at(_i).pt.x + 0.5f, _feOutput.m_leftKp.at(_i).pt.y + 0.5f);
-			cv::Point pt2 = cv::Point(_feOutput.m_rightKp.at(_i).pt.x + 0.5f, _feOutput.m_rightKp.at(_i).pt.y + 480.5f);
-			cv::Scalar color = cv::Scalar(_colorMap.at(_i).val[0], _colorMap.at(_i).val[1], _colorMap.at(_i).val[2]);
-			cv::circle(canvas, pt1, 3, color);
-			cv::circle(canvas, pt2, 3, color);
-			cv::line(canvas, pt1, pt2, color);
-		}
-		cv::resize(canvas, canvas, Size(canvas.cols*2/3.f, canvas.rows*2/3.f));
-		cv::imshow("Canvas", canvas);
-	}
-	cv::waitKey(15);
-	window.spinOnce(15, true);
-	window.removeAllWidgets();
 }
 
 void Stereo::prevRun() {
@@ -414,49 +446,90 @@ void Stereo::prevRun() {
 	window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(cv::Matx33d(fX, 0, cX, 0, fY, cY, 0, 0, 1)));
 
 	///////////////
-	if (m_vecDB.size() > 4)
-	{
 
-	}
-	
 	
 	window.spinOnce(30, true);
 }
 
+void Stereo::drawMap()
+{
+	if (m_vertices.size() == 0)
+		return;
+
+	window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(1000.0));
+	window.showWidget("Grid Widget", cv::viz::WGrid(cv::Vec<int, 2>::all(20), cv::Vec<double, 2>::all((1000.0))), cv::Affine3d(cv::Vec3d(CV_PI / 2.0, 0, 0), cv::Vec3d()));
+
+	std::vector<cv::Vec3b> color = FeatureExtractor::colorMapping(m_vertices.size());
+
+	for(int i=0;i<color.size(); i++)
+		std::cout << i <<": " <<color.at(i) << std::endl;
+	std::vector<cv::Vec3f> threeDs;
+	for (int i = 0; i < m_vertices.size(); i++)
+	{
+		cv::Mat depth(m_input.m_leftImg.size(), CV_32FC3, cv::Scalar::all(0));
+		cv::Mat colorMap(m_input.m_leftImg.size(), CV_8UC3, cv::Scalar::all(0));
+		cv::Mat _R, _T;
+		int size = m_vertices.at(i)->getData().m_KeyPoint.size();
+
+		if (i == 0) {
+			for (int j = 0; j < size; j++)
+			{
+				cv::Point pt = cv::Point((int)(m_vertices.at(i)->getData().m_KeyPoint.at(j).pt.x + 0.5f), (int)(m_vertices.at(i)->getData().m_KeyPoint.at(j).pt.y + 0.5f));
+				depth.at<cv::Vec3f>(pt) = m_vertices.at(i)->getData().m_WorldCoord.at(j);
+				colorMap.at<cv::Vec3b>(pt) = color.at(i);
+			}
+
+			cv::viz::WCloud cw(depth, colorMap);
+			cw.setRenderingProperty(cv::viz::POINT_SIZE, 2);
+			window.showWidget("Cloud Widget", cw);
+		}
+		else {
+			if (i == 1) {
+				_R = m_vertices.at(i-1)->getEdges().at(0).getDist().R.clone();
+				_T = m_vertices.at(i-1)->getEdges().at(0).getDist().T.clone();
+			}
+			else {
+				_R = m_vertices.at(i)->getEdges().at(0).getDist().R * _R;
+				_T = m_vertices.at(i)->getEdges().at(0).getDist().R * _T + m_vertices.at(i)->getEdges().at(0).getDist().T;
+			}
+			
+			cv::viz::WCloud cw(depth, colorMap);
+			cw.setRenderingProperty(cv::viz::POINT_SIZE, 2);
+
+			cv::Affine3d affine(_R, _T);
+			
+			std::string str;
+			str = std::to_string(i - 1) + ", " + std::to_string(i);
+			window.showWidget(str, cw, affine);
+		}
+		
+	}
+	cv::waitKey(15);
+	window.spinOnce(15, true);
+	window.removeAllWidgets();
+}
+
 bool Stereo::save(char* dbPath)
 {
-	std::ofstream log("..\\data\\log\\depth.txt");
-	for(int i=0;i<m_vecDB.size();i++)
-		for (int j = 0; j < m_vecDB.at(i).m_vecWorldCoord.size(); j++) {
-			log << m_vecDB.at(i).m_vecWorldCoord.at(j) << "\n";
-		}
-	log.close();
-
 	std::ofstream DBsaver(dbPath, std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
 	if (!DBsaver.is_open())
-	{
 		return false;
-	}
-	//// Keyframe[size, data], 3D coord, Descriptor[size, data]
-	int nDocSize = m_vecDB.size();
 
-	//char flag;
-	//printf("Documet size: %d\n[Yes: Y, No: N]", nDocSize);
-	//scanf(&flag);
-	//if (flag != 'Y' && flag != 'y')
-	//	return false;
+	int totVerticeSize = m_vertices.size();
+	DBsaver.write((char*)&totVerticeSize, sizeof(int));
 
-	DBsaver.write((char*)&nDocSize, sizeof(int));
-
-
-	for (int i = 0; i < nDocSize; i++)
+	for (int i = 0; i < totVerticeSize; i++)
 	{
-		// keypoint
-		int nKP = (int)m_vecDB.at(i).m_vecKeyPoint.size();
-		DBsaver.write((char*)&nKP, sizeof(int));
+		//vertice data
+		Data& data = m_vertices.at(i)->getData();
 
-		for (int j = 0; j < nKP; j++) {
-			cv::KeyPoint &kp = m_vecDB.at(i).m_vecKeyPoint.at(j);
+		// keypoint & 3D data
+		int keypointSize = data.m_KeyPoint.size();
+		DBsaver.write((char*)&keypointSize, sizeof(int));
+		for (int j = 0; j < keypointSize; j++)
+		{
+			// keypoint
+			cv::KeyPoint &kp = data.m_KeyPoint.at(j);
 			DBsaver.write((char*)&kp.angle, sizeof(float));
 			DBsaver.write((char*)&kp.class_id, sizeof(int));
 			DBsaver.write((char*)&kp.octave, sizeof(int));
@@ -465,15 +538,14 @@ bool Stereo::save(char* dbPath)
 			DBsaver.write((char*)&kp.response, sizeof(float));
 			DBsaver.write((char*)&kp.size, sizeof(float));
 
-			// 3D coordinates
-			cv::Vec3f &threeD = m_vecDB.at(i).m_vecWorldCoord.at(j);
+			// 3d data
+			cv::Vec3f &threeD = data.m_WorldCoord.at(j);
 			DBsaver.write((char*)&threeD.val[0], sizeof(float));
 			DBsaver.write((char*)&threeD.val[1], sizeof(float));
 			DBsaver.write((char*)&threeD.val[2], sizeof(float));
 		}
-
 		// descriptor
-		cv::Mat &dscr = m_vecDB.at(i).m_vecDescriptor;
+		cv::Mat &dscr = data.m_Descriptor;
 		int dscr_type = dscr.type();
 		int dscr_nData = 0;
 		if (dscr_type == 0) dscr_nData = 1;
@@ -486,29 +558,130 @@ bool Stereo::save(char* dbPath)
 		DBsaver.write((char*)&dscr_type, sizeof(int));
 		DBsaver.write((char*)dscr.data, dscr.cols * dscr.rows * dscr_nData);
 	}
+	for (int i = 0; i < totVerticeSize; i++)
+	{
+		// edge
+		std::vector<Edge> &edges = m_vertices.at(i)->getEdges();
+		int edgeSize = edges.size();
+		DBsaver.write((char*)&edgeSize, sizeof(int));
 
-	DBsaver.close();
-	return true;
+		for (int j = 0; j < edgeSize; j++)
+		{
+			EdgeDist& edgeDist = edges.at(j).getDist();
+			int startIdx = edges.at(j).getSrc()->getIdx();
+			int endIdx = edges.at(j).getDst()->getIdx();
+			DBsaver.write((char*)&startIdx, sizeof(int));
+			DBsaver.write((char*)&endIdx, sizeof(int));
+
+			cv::Mat &R = edgeDist.R;
+			int matType = R.type();
+			int nData = 0;
+			if (matType == 0) nData = 1;
+			else if (matType == 5) nData = 4;
+			else if (matType == 6) nData = 8;
+			else return false;
+
+			DBsaver.write((char*)&R.cols, sizeof(int));
+			DBsaver.write((char*)&R.rows, sizeof(int));
+			DBsaver.write((char*)&matType, sizeof(int));
+			DBsaver.write((char*)R.data, R.cols * R.rows * nData);
+
+			cv::Mat &T = edgeDist.T;
+			matType = T.type();
+			nData = 0;
+			if (matType == 0) nData = 1;
+			else if (matType == 5) nData = 4;
+			else if (matType == 6) nData = 8;
+			else return false;
+
+			DBsaver.write((char*)&T.cols, sizeof(int));
+			DBsaver.write((char*)&T.rows, sizeof(int));
+			DBsaver.write((char*)&matType, sizeof(int));
+			DBsaver.write((char*)T.data, T.cols * T.rows * nData);
+		}
+	}
 }
+//bool Stereo::save(char* dbPath)
+//{
+//	std::ofstream DBsaver(dbPath, std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
+//	if (!DBsaver.is_open())
+//	{
+//		return false;
+//	}
+//	//// Keyframe[size, data], 3D coord, Descriptor[size, data]
+//	int nDocSize = m_vecDB.size();
+//
+//	//char flag;
+//	//printf("Documet size: %d\n[Yes: Y, No: N]", nDocSize);
+//	//scanf(&flag);
+//	//if (flag != 'Y' && flag != 'y')
+//	//	return false;
+//
+//	DBsaver.write((char*)&nDocSize, sizeof(int));
+//
+//
+//	for (int i = 0; i < nDocSize; i++)
+//	{
+//		// keypoint
+//		int nKP = (int)m_vecDB.at(i).m_vecKeyPoint.size();
+//		DBsaver.write((char*)&nKP, sizeof(int));
+//
+//		for (int j = 0; j < nKP; j++) {
+//			cv::KeyPoint &kp = m_vecDB.at(i).m_vecKeyPoint.at(j);
+//			DBsaver.write((char*)&kp.angle, sizeof(float));
+//			DBsaver.write((char*)&kp.class_id, sizeof(int));
+//			DBsaver.write((char*)&kp.octave, sizeof(int));
+//			DBsaver.write((char*)&kp.pt.x, sizeof(float));
+//			DBsaver.write((char*)&kp.pt.y, sizeof(float));
+//			DBsaver.write((char*)&kp.response, sizeof(float));
+//			DBsaver.write((char*)&kp.size, sizeof(float));
+//
+//			// 3D coordinates
+//			cv::Vec3f &threeD = m_vecDB.at(i).m_vecWorldCoord.at(j);
+//			DBsaver.write((char*)&threeD.val[0], sizeof(float));
+//			DBsaver.write((char*)&threeD.val[1], sizeof(float));
+//			DBsaver.write((char*)&threeD.val[2], sizeof(float));
+//		}
+//
+//		// descriptor
+//		cv::Mat &dscr = m_vecDB.at(i).m_vecDescriptor;
+//		int dscr_type = dscr.type();
+//		int dscr_nData = 0;
+//		if (dscr_type == 0) dscr_nData = 1;
+//		else if (dscr_type == 5) dscr_nData = 4;
+//		else if (dscr_type == 6) dscr_nData = 8;
+//		else return false;
+//
+//		DBsaver.write((char*)&dscr.cols, sizeof(int));
+//		DBsaver.write((char*)&dscr.rows, sizeof(int));
+//		DBsaver.write((char*)&dscr_type, sizeof(int));
+//		DBsaver.write((char*)dscr.data, dscr.cols * dscr.rows * dscr_nData);
+//	}
+//
+//	DBsaver.close();
+//	return true;
+//}
 
-bool Stereo::load(char * dbPath)
+bool Stereo::load(char* dbPath)
 {
-	m_vecDB.clear();
+	std::vector<Vertex*> vertices;
 
 	std::ifstream DBloader(dbPath, std::ios_base::in | std::ios_base::binary);
-	if(!DBloader.is_open())
+	if (!DBloader.is_open())
 		return false;
 
-	int nDocSize = 0;
-	DBloader.read((char*)&nDocSize, sizeof(int));
+	int totVerticeSize = 0;
+	DBloader.read((char*)&totVerticeSize, sizeof(int));
 
-	for (int i = 0; i < nDocSize; i++)
+	for (int i = 0; i < totVerticeSize; i++)
 	{
-		int nKP = 0;
-		DBloader.read((char*)&nKP, sizeof(int));
+		// keypoint & 3D data
+		int keypointSize = 0;
+		DBloader.read((char*)&keypointSize, sizeof(int));
 		std::vector<cv::KeyPoint> kps;
 		std::vector<cv::Vec3f> threeDs;
-		for (int j = 0; j < nKP; j++)
+
+		for (int j = 0; j < keypointSize; j++)
 		{
 			cv::KeyPoint kp;
 			DBloader.read((char*)&kp.angle, sizeof(float));
@@ -526,7 +699,6 @@ bool Stereo::load(char * dbPath)
 			DBloader.read((char*)&threeD.val[2], sizeof(float));
 			threeDs.push_back(threeD);
 		}
-
 		int dscr_cols = 0;
 		int dscr_rows = 0;
 		int dscr_type = 0;
@@ -545,27 +717,177 @@ bool Stereo::load(char * dbPath)
 			else if (dscr_type == 6)
 				dscr_nData = sizeof(double);
 			else {
-				m_vecDB.clear();
+				m_vertices.clear();
 				return false;
 			}
 		}
 		else {
-			m_vecDB.clear();
+			m_vertices.clear();
 			return false;
 		}
 		cv::Mat tmpDscr(dscr_rows, dscr_cols, dscr_type);
 		DBloader.read((char*)tmpDscr.data, dscr_nData * dscr_cols * dscr_rows);
-		
-		DB db;
-		db.m_vecDescriptor = tmpDscr;
-		db.m_vecKeyPoint = kps;
-		db.m_vecWorldCoord = threeDs;
-		m_vecDB.push_back(db);
+
+		Data db;
+		db.m_Descriptor = tmpDscr;
+		db.m_KeyPoint = kps;
+		db.m_WorldCoord = threeDs;
+
+		vertices.push_back(new Vertex(i, db));
 	}
 
-	DBloader.close();
-	return true;
+	for (int i = 0; i < totVerticeSize; i++)
+	{
+		// edge
+		std::vector<Edge> edges;
+		int edgeSize = 0;
+		DBloader.read((char*)&edgeSize, sizeof(int));
+
+		for (int j = 0; j < edgeSize; j++)
+		{
+			int startIdx = 0;
+			int endIdx = 0;
+			DBloader.read((char*)&startIdx, sizeof(int));
+			DBloader.read((char*)&endIdx, sizeof(int));
+
+			EdgeDist edgeDist;
+			//cv::Mat R; = edgeDist.R;
+			int matCols = 0;
+			int matRows = 0;
+			int matType = 0;
+			int nData = 0;
+
+			DBloader.read((char*)&matCols, sizeof(int));
+			DBloader.read((char*)&matRows, sizeof(int));
+			DBloader.read((char*)&matType, sizeof(int));
+
+			if (matRows != 0) {
+				if (matType == 0)
+					nData = sizeof(uchar);
+				else if (matType == 5)
+					nData = sizeof(float);
+				else if (matType == 6)
+					nData = sizeof(double);
+				else {
+					m_vertices.clear();
+					return false;
+				}
+			}
+			else {
+				m_vertices.clear();
+				return false;
+			}
+			cv::Mat R(matRows, matCols, matType);
+			DBloader.read((char*)R.data, matCols * matRows * nData);
+
+			matType = 0;
+			nData = 0;
+			DBloader.read((char*)&matCols, sizeof(int));
+			DBloader.read((char*)&matRows, sizeof(int));
+			DBloader.read((char*)&matType, sizeof(int));
+			if (matRows != 0) {
+				if (matType == 0)
+					nData = sizeof(uchar);
+				else if (matType == 5)
+					nData = sizeof(float);
+				else if (matType == 6)
+					nData = sizeof(double);
+				else {
+					m_vertices.clear();
+					return false;
+				}
+			}
+			else {
+				m_vertices.clear();
+				return false;
+			}
+
+			cv::Mat T(matRows, matCols, matType);
+			DBloader.read((char*)R.data, matCols * matRows * nData);
+
+			edgeDist.R = R.clone();
+			edgeDist.T = T.clone();
+			edges.push_back(Edge(vertices.at(startIdx), vertices.at(endIdx), edgeDist));
+		}
+		vertices.at(i)->setEdges(edges);
+	}
+	m_vertices = vertices;
 }
+//bool Stereo::load(char * dbPath)
+//{
+//	m_vertices.clear();
+//
+//	std::ifstream DBloader(dbPath, std::ios_base::in | std::ios_base::binary);
+//	if(!DBloader.is_open())
+//		return false;
+//
+//	int nDocSize = 0;
+//	DBloader.read((char*)&nDocSize, sizeof(int));
+//
+//	for (int i = 0; i < nDocSize; i++)
+//	{
+//		int nKP = 0;
+//		DBloader.read((char*)&nKP, sizeof(int));
+//		std::vector<cv::KeyPoint> kps;
+//		std::vector<cv::Vec3f> threeDs;
+//		for (int j = 0; j < nKP; j++)
+//		{
+//			cv::KeyPoint kp;
+//			DBloader.read((char*)&kp.angle, sizeof(float));
+//			DBloader.read((char*)&kp.class_id, sizeof(int));
+//			DBloader.read((char*)&kp.octave, sizeof(int));
+//			DBloader.read((char*)&kp.pt.x, sizeof(float));
+//			DBloader.read((char*)&kp.pt.y, sizeof(float));
+//			DBloader.read((char*)&kp.response, sizeof(float));
+//			DBloader.read((char*)&kp.size, sizeof(float));
+//			kps.push_back(kp);
+//
+//			cv::Vec3f threeD;
+//			DBloader.read((char*)&threeD.val[0], sizeof(float));
+//			DBloader.read((char*)&threeD.val[1], sizeof(float));
+//			DBloader.read((char*)&threeD.val[2], sizeof(float));
+//			threeDs.push_back(threeD);
+//		}
+//
+//		int dscr_cols = 0;
+//		int dscr_rows = 0;
+//		int dscr_type = 0;
+//		int dscr_nData = 0;
+//
+//		DBloader.read((char*)&dscr_cols, sizeof(int));
+//		DBloader.read((char*)&dscr_rows, sizeof(int));
+//		DBloader.read((char*)&dscr_type, sizeof(int));
+//
+//		if (dscr_rows != 0)
+//		{
+//			if (dscr_type == 0)
+//				dscr_nData = sizeof(uchar);
+//			else if (dscr_type == 5)
+//				dscr_nData = sizeof(float);
+//			else if (dscr_type == 6)
+//				dscr_nData = sizeof(double);
+//			else {
+//				m_vecDB.clear();
+//				return false;
+//			}
+//		}
+//		else {
+//			m_vecDB.clear();
+//			return false;
+//		}
+//		cv::Mat tmpDscr(dscr_rows, dscr_cols, dscr_type);
+//		DBloader.read((char*)tmpDscr.data, dscr_nData * dscr_cols * dscr_rows);
+//		
+//		DB db;
+//		db.m_vecDescriptor = tmpDscr;
+//		db.m_vecKeyPoint = kps;
+//		db.m_vecWorldCoord = threeDs;
+//		m_vecDB.push_back(db);
+//	}
+//
+//	DBloader.close();
+//	return true;
+//}
 
 void Stereo::estimateRigid3D(std::vector<cv::Vec3f>& pt1, std::vector<cv::Vec3f>& pt2, cv::Matx<double, 3, 3>& rot, cv::Matx<double, 3, 1>& tran, double* error)
 {
@@ -730,16 +1052,77 @@ void Stereo::estimateRigid3D(std::vector<cv::Point3f>& pt1, std::vector<cv::Poin
 
 void Stereo::keyframe()
 {
-	DB db;
-	db.m_vecDescriptor = m_output.m_Descriptor;
-	db.m_vecKeyPoint = m_output.m_KeyPoint;
-	db.m_vecWorldCoord = m_output.m_WorldCoord;
+	Data db;
+	db.m_Descriptor = m_output.m_Descriptor;
+	db.m_KeyPoint = m_output.m_KeyPoint;
+	db.m_WorldCoord = m_output.m_WorldCoord;
 
-	m_vecDB.push_back(db);
 
-	std::string filename = "..\\data\\Image\\" + std::to_string(m_vecDB.size()) + ".jpg";
+	int nSize = m_vertices.size();
+
+	std::string filename = "..\\data\\Image\\" + std::to_string(nSize + 1) + ".jpg";
 	saveImage(filename);
-	
+
+	Vertex* vtx = new Vertex(nSize, db);
+
+	if (nSize == 0)
+		m_vertices.push_back(vtx);
+	else 
+	{
+		int lastIdx = nSize - 1;
+		std::vector<Edge> edge = m_vertices.at(lastIdx)->getEdges();
+		if (edge.size() > 0)
+			printf("???????????????????\n");
+
+		Data data = m_vertices.at(lastIdx)->getData();
+
+		FeatureExtractor _fe;
+		_fe.featureMatching(data.m_KeyPoint, m_output.m_KeyPoint, data.m_Descriptor, m_output.m_Descriptor);
+		FeatureExtractor::Output _feOutput = _fe.getOutput();
+
+		// caculate camera pose to 3D - 2D
+		std::vector<cv::Point3f> objectPoints;
+		std::vector<cv::Point2f> imagePoints;
+
+		for (int j = 0; j < _feOutput.m_leftKp.size(); j++)
+		{
+			objectPoints.push_back(
+				cv::Point3f(
+				(float)data.m_WorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[0],
+					(float)data.m_WorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[1],
+					(float)data.m_WorldCoord.at(_feOutput.m_mappingIdx1.at(j)).val[2]
+				));
+			imagePoints.push_back(m_output.m_KeyPoint.at(_feOutput.m_mappingIdx2.at(j)).pt);
+		}
+
+		cv::Mat rvec, tvec;
+
+		cv::Mat zeroDistCoeffs(14, 1, CV_64F, cv::Scalar::all(0.0));
+		try
+		{
+			cv::solvePnPRansac(objectPoints, imagePoints,
+				/*m_calibOutput.K1*/K,
+				/*m_calibOutput.distCoeffs1*/zeroDistCoeffs,
+				rvec, tvec, false, 100);
+		}
+		catch (const std::exception&)
+		{
+			return;
+		}
+
+		cv::Mat R;
+		cv::Rodrigues(rvec, R);
+
+		cv::Mat R_inv = R.inv();
+		cv::Mat P = -R_inv*tvec;
+
+		EdgeDist dist;
+		dist.R = R_inv.clone();
+		dist.T = P.clone();
+
+		m_vertices.push_back(vtx);
+		m_vertices.at(nSize - 1)->addEdge(vtx, dist);
+	}	
 }
 
 void Stereo::saveImage(std::string fileName)

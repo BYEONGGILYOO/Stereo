@@ -71,5 +71,5 @@ public:
 	void featureMatching(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, cv::Mat & dscr1, cv::Mat & dscr2, double* matched_ratio = nullptr);
 	void allCompute();
 	void run();
-	std::vector<cv::Vec3b> colorMapping(int Size);
+	static std::vector<cv::Vec3b> colorMapping(int Size);
 };

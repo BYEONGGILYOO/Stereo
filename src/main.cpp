@@ -71,6 +71,7 @@ int main(int argc, char** argv)
 			return 0;
 
 		stereo.run();
+		stereo.drawMap();
 
 		if (GetAsyncKeyState(0x49) & 0x8000) {		// I
 			printf("keyframed\n");

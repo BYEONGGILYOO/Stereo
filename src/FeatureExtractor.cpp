@@ -178,8 +178,8 @@ std::vector<cv::Vec3b> FeatureExtractor::colorMapping(int Size)
 {
 	std::vector<cv::Vec3b> dst;
 
-	double dStep = 180.0 / (double)(Size - 1);
-	for (int i = 0; i < Size; i++)
+	double dStep = 180.0 / (double)Size;
+	for (int i = 1; i < Size + 1; i++)
 	{
 		cv::Vec3b tmp;
 		tmp.val[0] = (i*dStep);
