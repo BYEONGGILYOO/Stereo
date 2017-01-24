@@ -20,7 +20,7 @@ Stereo::Stereo()
 	window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(1000.0));
 	window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(K, 1000.0, cv::viz::Color::green()));
 	//window.setViewerPose(cv::Affine3d(cv::Vec3d(), cv::Vec3d(0.0, 0.0, -5000.0)));
-
+	m_color = FeatureExtractor::colorMapping(20);
 	// test
 	sgbm = cv::StereoSGBM::create(0, 16 * 6, 9);
 
@@ -459,16 +459,15 @@ void Stereo::drawMap()
 	window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(1000.0));
 	window.showWidget("Grid Widget", cv::viz::WGrid(cv::Vec<int, 2>::all(20), cv::Vec<double, 2>::all((1000.0))), cv::Affine3d(cv::Vec3d(CV_PI / 2.0, 0, 0), cv::Vec3d()));
 
-	std::vector<cv::Vec3b> color = FeatureExtractor::colorMapping(m_vertices.size());
-
-	for(int i=0;i<color.size(); i++)
-		std::cout << i <<": " <<color.at(i) << std::endl;
+	//std::vector<cv::Vec3b> color = FeatureExtractor::colorMapping(m_vertices.size());
 	std::vector<cv::Vec3f> threeDs;
+	cv::Mat _RT;
+
 	for (int i = 0; i < m_vertices.size(); i++)
 	{
 		cv::Mat depth(m_input.m_leftImg.size(), CV_32FC3, cv::Scalar::all(0));
 		cv::Mat colorMap(m_input.m_leftImg.size(), CV_8UC3, cv::Scalar::all(0));
-		cv::Mat _R, _T;
+		
 		int size = m_vertices.at(i)->getData().m_KeyPoint.size();
 
 		if (i == 0) {
@@ -476,7 +475,7 @@ void Stereo::drawMap()
 			{
 				cv::Point pt = cv::Point((int)(m_vertices.at(i)->getData().m_KeyPoint.at(j).pt.x + 0.5f), (int)(m_vertices.at(i)->getData().m_KeyPoint.at(j).pt.y + 0.5f));
 				depth.at<cv::Vec3f>(pt) = m_vertices.at(i)->getData().m_WorldCoord.at(j);
-				colorMap.at<cv::Vec3b>(pt) = color.at(i);
+				colorMap.at<cv::Vec3b>(pt) = m_color.at(i);
 			}
 
 			cv::viz::WCloud cw(depth, colorMap);
@@ -484,19 +483,28 @@ void Stereo::drawMap()
 			window.showWidget("Cloud Widget", cw);
 		}
 		else {
+			for (int j = 0; j < size; j++)
+			{
+				cv::Point pt = cv::Point((int)(m_vertices.at(i)->getData().m_KeyPoint.at(j).pt.x + 0.5f), (int)(m_vertices.at(i)->getData().m_KeyPoint.at(j).pt.y + 0.5f));
+				depth.at<cv::Vec3f>(pt) = m_vertices.at(i)->getData().m_WorldCoord.at(j);
+				colorMap.at<cv::Vec3b>(pt) = m_color.at(i);
+			}
+
 			if (i == 1) {
-				_R = m_vertices.at(i-1)->getEdges().at(0).getDist().R.clone();
-				_T = m_vertices.at(i-1)->getEdges().at(0).getDist().T.clone();
+				//_R = m_vertices.at(i-1)->getEdges().at(0).getDist().R.clone();
+				//_T = m_vertices.at(i-1)->getEdges().at(0).getDist().T.clone();
+				RnT2RT(m_vertices.at(i - 1)->getEdges().at(0).getDist().R, m_vertices.at(i - 1)->getEdges().at(0).getDist().T, _RT);
 			}
 			else {
-				_R = m_vertices.at(i)->getEdges().at(0).getDist().R * _R;
-				_T = m_vertices.at(i)->getEdges().at(0).getDist().R * _T + m_vertices.at(i)->getEdges().at(0).getDist().T;
+				cv::Mat tmpRT;
+				RnT2RT(m_vertices.at(i - 1)->getEdges().at(0).getDist().R, m_vertices.at(i - 1)->getEdges().at(0).getDist().T, tmpRT);
+				_RT = tmpRT * _RT;
 			}
 			
 			cv::viz::WCloud cw(depth, colorMap);
 			cw.setRenderingProperty(cv::viz::POINT_SIZE, 2);
 
-			cv::Affine3d affine(_R, _T);
+			cv::Affine3d affine(_RT);
 			
 			std::string str;
 			str = std::to_string(i - 1) + ", " + std::to_string(i);
@@ -1172,4 +1180,13 @@ void Stereo::setCalibOutput(const CalibOutput output)
 	m_input.m_calibOutput.R1 = output.R1;
 	m_input.m_calibOutput.R2 = output.R2;
 	m_input.m_calibOutput.T = output.T;
+}
+
+void Stereo::RnT2RT(cv::Mat& R, cv::Mat& T, cv::Mat& RT)
+{
+	RT = R.clone();
+	cv::hconcat(RT, T, RT);
+	cv::Mat tmp(1, 4, RT.type(), cv::Scalar::all(0));
+	tmp.at<double>(0, 3) = 1.0;
+	RT.push_back(tmp);
 }

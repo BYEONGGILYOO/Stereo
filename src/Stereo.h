@@ -11,6 +11,7 @@
 #include "StereoCalibration.h"
 #include "FeatureExtractor.h"
 #include "Graph.h"
+#include "CommonFunctions.h"
 
 typedef StereoCalibration::Output CalibOutput;
 
@@ -56,7 +57,7 @@ private:
 	cv::viz::Viz3d window1;
 	// visualize with viz module
 	cv::viz::Viz3d window;
-
+	std::vector<cv::Vec3b> m_color;
 	// test full depth
 	cv::Ptr<cv::StereoSGBM> sgbm;
 
@@ -89,5 +90,6 @@ public:
 	void setInput(const Input input, const CalibOutput calibOutput);
 	Output getOutput() const;
 	void setCalibOutput(const CalibOutput output);
+	void RnT2RT(cv::Mat & R, cv::Mat & T, cv::Mat & RT);
 };
 
