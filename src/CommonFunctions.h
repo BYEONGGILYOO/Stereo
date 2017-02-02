@@ -4,5 +4,6 @@
 
 namespace CFunc
 {
-	std::string type2str(int type);
+	// convert cv::Mat type to std::string
+	std::string type2str(int type);		
 }

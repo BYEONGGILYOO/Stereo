@@ -15,12 +15,14 @@ Stereo::Stereo()
 	p2 = 0.0;
 	K = cv::Matx33d(fX, 0.0, cX, 0.0, fY, cY, 0.0, 0.0, 1.0);
 
-	window1 = cv::viz::Viz3d("Coordinate Frame1");
 	window = cv::viz::Viz3d("Coordinate Frame");
-	window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(1000.0));
-	window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(K, 1000.0, cv::viz::Color::green()));
-	//window.setViewerPose(cv::Affine3d(cv::Vec3d(), cv::Vec3d(0.0, 0.0, -5000.0)));
+	wCoord = cv::viz::WCoordinateSystem(1000.0);
+	wGrid = cv::viz::WGrid(cv::Vec<int, 2>::all(20), cv::Vec<double, 2>::all((1000.0)));
+	wGrid.setRenderingProperty(cv::viz::OPACITY, 0.3);
+	
+	wCloudCollection.setRenderingProperty(cv::viz::POINT_SIZE, 2);
 	m_color = FeatureExtractor::colorMapping(20);
+
 	// test
 	sgbm = cv::StereoSGBM::create(0, 16 * 6, 9);
 
@@ -40,9 +42,7 @@ Stereo::~Stereo()
 {
 }
 
-
-
-void Stereo::caculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>&kp2, std::vector<cv::Vec3f>& dst, std::vector<float>& disparity)
+void Stereo::calculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>&kp2, std::vector<cv::Vec3f>& dst, std::vector<float>& disparity)
 {
 	dst.clear();
 	std::vector<float> tmpDisparity;
@@ -71,6 +71,7 @@ void Stereo::run()
 
 	int64 time = getTickCount();
 
+	//// calculate the depth
 	FeatureExtractor::Input feInput;
 	feInput.m_LeftImg = m_input.m_leftImg;
 	feInput.m_RightImg = m_input.m_rightImg;
@@ -80,7 +81,7 @@ void Stereo::run()
 
 	FeatureExtractor::Output feOutput = m_feature.getOutput();
 	std::vector<float> dispari;
-	caculateDepth(feOutput.m_leftKp, feOutput.m_rightKp, m_output.m_WorldCoord, dispari);
+	calculateDepth(feOutput.m_leftKp, feOutput.m_rightKp, m_output.m_WorldCoord, dispari);
 
 	cv::Mat depth(m_input.m_leftImg.size(), CV_32FC3, cv::Scalar::all(0));
 
@@ -88,26 +89,20 @@ void Stereo::run()
 	for (int i = 0; i < size; i++)
 	{
 		cv::Point pt = cv::Point((int)(feOutput.m_leftKp.at(i).pt.x + 0.5f), (int)(feOutput.m_leftKp.at(i).pt.y + 0.5f));
-		depth.at<cv::Vec3f>(pt) = m_output.m_WorldCoord.at(i);
+		depth.at<cv::Vec3f>(pt) = m_output.m_WorldCoord.at(i);	// save reference left 3D
 	}
-	m_output.m_Descriptor = feOutput.m_leftDescr;
-	m_output.m_KeyPoint = feOutput.m_leftKp;
-
-	// draw
-	// color mapping
-	cv::Mat colorMap(depth.size(), CV_8UC3, cv::Scalar::all(0));
-	for (int i = 0; i < size; i++)
-	{
-		cv::Point pt = cv::Point((int)(feOutput.m_leftKp.at(i).pt.x + 0.5f), (int)(feOutput.m_leftKp.at(i).pt.y + 0.5f));
-		colorMap.at<cv::Vec3b>(pt) = feOutput.m_color.at(i);
-	}
+	m_output.m_Descriptor = feOutput.m_leftDescr;		// save reference left descriptor
+	m_output.m_KeyPoint = feOutput.m_leftKp;			// save reference left keypoint
 	
-	//cv::viz::WCloud cw(depth, /*colorMap*/cv::viz::Color::yellow());
-	/*cw.setRenderingProperty(cv::viz::POINT_SIZE, 2);
-	window.showWidget("Cloud Widget", cw);
-	window.showWidget("Grid Widget", cv::viz::WGrid(cv::Vec<int, 2>::all(20), cv::Vec<double, 2>::all((1000.0))), cv::Affine3d(cv::Vec3d(CV_PI / 2.0, 0, 0), cv::Vec3d()));
-	window.showWidget("CameraPosition Widget", cv::viz::WCameraPosition(cv::Matx33d(fX, 0.0, cX, 0.0, fY, cY, 0.0, 0.0, 1.0), 1000.0, cv::viz::Color::green()));
-	window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(1000.0));*/
+	cv::viz::WCloud wCloud(depth, cv::viz::Color::white());
+	wCloud.setRenderingProperty(cv::viz::POINT_SIZE, 2);
+	window.showWidget("Cloud Widget", wCloud);
+	window.showWidget("Coordinate Widget", wCoord);
+	window.showWidget("Grid Widget", wGrid, cv::Affine3d(cv::Vec3d(CV_PI / 2.0, 0, 0), cv::Vec3d()));
+
+	//
+	//cv::waitKey(15);
+	window.spinOnce(15, true);
 
 	m_mode = -1;
 	//if (/*m_input.*/m_mode == M_QUERY)
@@ -233,7 +228,7 @@ void Stereo::run()
 	//	}
 	//}
 	
-	if (1)
+	if (0)
 	{
 		int dbSize = m_vertices.size();
 		if (dbSize != 0)
@@ -451,14 +446,14 @@ void Stereo::prevRun() {
 	window.spinOnce(30, true);
 }
 
+// draw and calculate the 3D map
 void Stereo::drawMap()
 {
 	if (m_vertices.size() == 0)
 		return;
 
-	window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(1000.0));
-	window.showWidget("Grid Widget", cv::viz::WGrid(cv::Vec<int, 2>::all(20), cv::Vec<double, 2>::all((1000.0))), cv::Affine3d(cv::Vec3d(CV_PI / 2.0, 0, 0), cv::Vec3d()));
-
+	window.showWidget("Coordinate Widget", wCoord);
+	window.showWidget("Grid Widget", wGrid, cv::Affine3d(cv::Vec3d(CV_PI / 2.0, 0, 0), cv::Vec3d()));
 	//std::vector<cv::Vec3b> color = FeatureExtractor::colorMapping(m_vertices.size());
 	std::vector<cv::Vec3f> threeDs;
 	cv::Mat _RT;
@@ -467,7 +462,8 @@ void Stereo::drawMap()
 	{
 		cv::Mat depth(m_input.m_leftImg.size(), CV_32FC3, cv::Scalar::all(0));
 		cv::Mat colorMap(m_input.m_leftImg.size(), CV_8UC3, cv::Scalar::all(0));
-		
+		cv::Affine3d affine = cv::Affine3d(cv::Vec3d::all((0.0)));
+
 		int size = m_vertices.at(i)->getData().m_KeyPoint.size();
 
 		if (i == 0) {
@@ -478,9 +474,9 @@ void Stereo::drawMap()
 				colorMap.at<cv::Vec3b>(pt) = m_color.at(i);
 			}
 
-			cv::viz::WCloud cw(depth, colorMap);
+			/*cv::viz::WCloud cw(depth, colorMap);
 			cw.setRenderingProperty(cv::viz::POINT_SIZE, 2);
-			window.showWidget("Cloud Widget", cw);
+			window.showWidget("Cloud Widget", cw);*/
 		}
 		else {
 			for (int j = 0; j < size; j++)
@@ -501,20 +497,20 @@ void Stereo::drawMap()
 				_RT = tmpRT * _RT;
 			}
 			
-			cv::viz::WCloud cw(depth, colorMap);
-			cw.setRenderingProperty(cv::viz::POINT_SIZE, 2);
+			/*cv::viz::WCloud cw(depth, colorMap);
+			cw.setRenderingProperty(cv::viz::POINT_SIZE, 2);*/
 
-			cv::Affine3d affine(_RT);
+			affine = cv::Affine3d(_RT);
 			
-			std::string str;
+			/*std::string str;
 			str = std::to_string(i - 1) + ", " + std::to_string(i);
-			window.showWidget(str, cw, affine);
+			window.showWidget(str, cw, affine);*/
 		}
-		
+		wCloudCollection.addCloud(depth, colorMap, affine);
 	}
+	window.showWidget("CloudCollection Widget", wCloudCollection);
 	cv::waitKey(15);
 	window.spinOnce(15, true);
-	window.removeAllWidgets();
 }
 
 bool Stereo::save(char* dbPath)
@@ -1103,18 +1099,26 @@ void Stereo::keyframe()
 			imagePoints.push_back(m_output.m_KeyPoint.at(_feOutput.m_mappingIdx2.at(j)).pt);
 		}
 
+		// calculate R|T with solvePnP
 		cv::Mat rvec, tvec;
-
 		cv::Mat zeroDistCoeffs(14, 1, CV_64F, cv::Scalar::all(0.0));
+
 		try
 		{
-			cv::solvePnPRansac(objectPoints, imagePoints,
-				/*m_calibOutput.K1*/K,
-				/*m_calibOutput.distCoeffs1*/zeroDistCoeffs,
-				rvec, tvec, false, 100);
+			if(m_input.m_calibOutput.isCalibed)
+				cv::solvePnPRansac(objectPoints, imagePoints,
+					m_input.m_calibOutput.K1,
+					m_input.m_calibOutput.distCoeffs1,
+					rvec, tvec, false, 100);
+			else
+				cv::solvePnPRansac(objectPoints, imagePoints,
+					K,
+					zeroDistCoeffs,
+					rvec, tvec, false, 100);
 		}
 		catch (const std::exception&)
 		{
+			std::cout << "[ERROR:exception] SolvePnPRansac" << std::endl;
 			return;
 		}
 
@@ -1150,6 +1154,9 @@ void Stereo::setInput(const Input input)
 	m_input.m_leftImg = input.m_leftImg;
 	m_input.m_rightImg = input.m_rightImg;
 	m_input.m_mode = input.m_mode;
+	m_input.m_calibOutput.isCalibed = input.m_calibOutput.isCalibed;
+	if(m_input.m_calibOutput.isCalibed)
+		setCalibOutput(input.m_calibOutput);
 }
 
 void Stereo::setInput(const Input input, const CalibOutput calibOutput)
@@ -1157,7 +1164,7 @@ void Stereo::setInput(const Input input, const CalibOutput calibOutput)
 	m_input.m_leftImg = input.m_leftImg;
 	m_input.m_rightImg = input.m_rightImg;
 	m_input.m_mode = input.m_mode;
-	m_input.m_calibOutput = calibOutput;
+	setCalibOutput(calibOutput);
 }
 
 Stereo::Output Stereo::getOutput() const
@@ -1167,19 +1174,20 @@ Stereo::Output Stereo::getOutput() const
 
 void Stereo::setCalibOutput(const CalibOutput output)
 {
-	m_input.m_calibOutput.distCoeffs1 = output.distCoeffs1;
-	m_input.m_calibOutput.distCoeffs2 = output.distCoeffs2;
-	m_input.m_calibOutput.E = output.E;
-	m_input.m_calibOutput.F = output.F;
-	m_input.m_calibOutput.K1 = output.K1;
-	m_input.m_calibOutput.K2 = output.K2;
-	m_input.m_calibOutput.P1 = output.P1;
-	m_input.m_calibOutput.P2 = output.P2;
-	m_input.m_calibOutput.Q = output.Q;
-	m_input.m_calibOutput.R = output.R;
-	m_input.m_calibOutput.R1 = output.R1;
-	m_input.m_calibOutput.R2 = output.R2;
-	m_input.m_calibOutput.T = output.T;
+	m_input.m_calibOutput.distCoeffs1 = output.distCoeffs1.clone();
+	m_input.m_calibOutput.distCoeffs2 = output.distCoeffs2.clone();
+	m_input.m_calibOutput.E = output.E.clone();
+	m_input.m_calibOutput.F = output.F.clone();
+	m_input.m_calibOutput.K1 = output.K1.clone();
+	m_input.m_calibOutput.K2 = output.K2.clone();
+	m_input.m_calibOutput.P1 = output.P1.clone();
+	m_input.m_calibOutput.P2 = output.P2.clone();
+	m_input.m_calibOutput.Q = output.Q.clone();
+	m_input.m_calibOutput.R = output.R.clone();
+	m_input.m_calibOutput.R1 = output.R1.clone();
+	m_input.m_calibOutput.R2 = output.R2.clone();
+	m_input.m_calibOutput.T = output.T.clone();
+	m_input.m_calibOutput.isCalibed = output.isCalibed;
 }
 
 void Stereo::RnT2RT(cv::Mat& R, cv::Mat& T, cv::Mat& RT)

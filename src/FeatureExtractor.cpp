@@ -178,29 +178,20 @@ std::vector<cv::Vec3b> FeatureExtractor::colorMapping(int Size)
 {
 	std::vector<cv::Vec3b> dst;
 
-	double dStep = 180.0 / (double)Size;
-	for (int i = 1; i < Size + 1; i++)
+	double dHStep = 180.0 / (double)Size;
+
+	for (int i = Size; i > 0; i--)
 	{
 		cv::Vec3b tmp;
-		tmp.val[0] = (i*dStep);
+		tmp.val[0] = (i*dHStep);
 		tmp.val[1] = 255;
 		tmp.val[2] = 255;
 
 		dst.push_back(tmp);
 	}
+	
 	cv::cvtColor(dst, dst, CV_HSV2BGR);
 	return dst;
-	/*
-
-	m_output.m_color.clear();
-	for (int i = 0; i < m_output.m_leftKp.size(); i++) {
-		m_output.m_color.push_back(
-			cv::Scalar(
-			dst.at<cv::Vec3b>((int)(m_output.m_leftKp.at(i).pt.y + 0.5f), (int)(m_output.m_leftKp.at(i).pt.x + 0.5f))[0],
-			dst.at<cv::Vec3b>((int)(m_output.m_leftKp.at(i).pt.y + 0.5f), (int)(m_output.m_leftKp.at(i).pt.x + 0.5f))[1],
-			dst.at<cv::Vec3b>((int)(m_output.m_leftKp.at(i).pt.y + 0.5f), (int)(m_output.m_leftKp.at(i).pt.x + 0.5f))[2])
-		);
-	}*/
 }
 void FeatureExtractor::lineCompute()
 {

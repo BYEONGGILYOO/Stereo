@@ -14,6 +14,7 @@ public:
 		cv::Mat distCoeffs1, distCoeffs2;
 		cv::Mat R, T, R1, R2, P1, P2, Q;
 		cv::Mat E, F;
+		bool isCalibed;
 	}Output;
 
 	StereoCalibration(int board_width, int board_height, float square_width, float square_height);
@@ -25,9 +26,9 @@ public:
 	void Undistort(const Mat &view1, Mat &rview1, const Mat &view2, Mat &rview2);
 	bool SaveCalibrationData(const std::string path);
 	Output getOutput() const;
+	inline bool isCalibed() const { return m_calibFlag; }
 private:
 	Output m_output;
-
 	const Size boardSize;
 	const Size2f squareSize;
 	bool m_calibFlag;

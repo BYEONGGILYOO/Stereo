@@ -57,6 +57,9 @@ private:
 	cv::viz::Viz3d window1;
 	// visualize with viz module
 	cv::viz::Viz3d window;
+	cv::viz::WCoordinateSystem wCoord;
+	cv::viz::WGrid wGrid;
+	cv::viz::WCloudCollection wCloudCollection;
 	std::vector<cv::Vec3b> m_color;
 	// test full depth
 	cv::Ptr<cv::StereoSGBM> sgbm;
@@ -67,12 +70,12 @@ public:
 	Stereo();
 	~Stereo();
 
-	inline void caculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, std::vector<cv::Vec3f>& dst)
+	inline void calculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, std::vector<cv::Vec3f>& dst)
 	{
 		std::vector<float> disparity;
-		caculateDepth(kp1, kp2, dst, disparity);
+		calculateDepth(kp1, kp2, dst, disparity);
 	}
-	void caculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, std::vector<cv::Vec3f>& dst, std::vector<float>& disparity);
+	void calculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, std::vector<cv::Vec3f>& dst, std::vector<float>& disparity);
 	void run();
 	void prevRun();
 	void drawMap();

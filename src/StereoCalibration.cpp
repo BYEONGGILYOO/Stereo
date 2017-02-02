@@ -8,6 +8,7 @@ StereoCalibration::StereoCalibration(int board_width, int board_height, float sq
 	m_output.K2 = Mat::eye(3, 3, CV_64F);
 	m_output.distCoeffs1 = Mat::zeros(8, 1, CV_64F);
 	m_output.distCoeffs2 = Mat::zeros(8, 1, CV_64F);
+	m_output.isCalibed = false;
 }
 
 void StereoCalibration::InitCalibration()
@@ -89,6 +90,7 @@ bool StereoCalibration::RunCalibration()
 		initUndistortRectifyMap(m_output.K2, m_output.distCoeffs2, m_output.R2, m_output.P2, m_imageSize, CV_16SC2, map3, map4);
 	}
 	m_calibFlag = ok;
+	m_output.isCalibed = ok;
 	return ok;
 }
 
@@ -125,6 +127,7 @@ bool StereoCalibration::LoadCalibrationData(const std::string path)
 	initUndistortRectifyMap(m_output.K2, m_output.distCoeffs2, m_output.R2, m_output.P2, m_imageSize, CV_16SC2, map3, map4);
 
 	m_calibFlag = true;
+	m_output.isCalibed = true;
 	return true;
 }
 
