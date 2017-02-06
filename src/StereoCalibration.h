@@ -15,6 +15,9 @@ public:
 		cv::Mat R, T, R1, R2, P1, P2, Q;
 		cv::Mat E, F;
 		bool isCalibed;
+		void initialize() {
+			isCalibed = false;
+		}
 	}Output;
 
 	StereoCalibration(int board_width, int board_height, float square_width, float square_height);

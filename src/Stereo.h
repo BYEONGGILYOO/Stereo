@@ -28,6 +28,11 @@ public:
 		cv::Mat m_rightImg;
 		int m_mode;
 		CalibOutput m_calibOutput;
+		void initialize()
+		{
+			m_mode = -1;
+			m_calibOutput.initialize();
+		}
 	}Input;
 
 	typedef Data Output;
@@ -59,7 +64,7 @@ private:
 	cv::viz::Viz3d window;
 	cv::viz::WCoordinateSystem wCoord;
 	cv::viz::WGrid wGrid;
-	cv::viz::WCloudCollection wCloudCollection;
+	
 	std::vector<cv::Vec3b> m_color;
 	// test full depth
 	cv::Ptr<cv::StereoSGBM> sgbm;
@@ -70,12 +75,12 @@ public:
 	Stereo();
 	~Stereo();
 
-	inline void calculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, std::vector<cv::Vec3f>& dst)
+	inline void calculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, std::vector<cv::Matx31d>& dst)
 	{
 		std::vector<float> disparity;
 		calculateDepth(kp1, kp2, dst, disparity);
 	}
-	void calculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, std::vector<cv::Vec3f>& dst, std::vector<float>& disparity);
+	void calculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, std::vector<cv::Matx31d>& dst, std::vector<float>& disparity);
 	void run();
 	void prevRun();
 	void drawMap();
@@ -93,6 +98,6 @@ public:
 	void setInput(const Input input, const CalibOutput calibOutput);
 	Output getOutput() const;
 	void setCalibOutput(const CalibOutput output);
-	void RnT2RT(cv::Mat & R, cv::Mat & T, cv::Mat & RT);
+	void RnT2RT(cv::Matx33d & R, cv::Matx31d & T, cv::Matx44d & RT);
 };
 

@@ -4,10 +4,8 @@ FeatureExtractor::FeatureExtractor()
 	:akaze_thresh(3e-4), 
 	K(cv::Matx33d(700.0, 0, 320.0, 0, 700.0, 240.0, 0, 0, 1.0)), nn_match_ratio(0.8), ransac_thresh(2.5)
 {
-	akaze = cv::AKAZE::create();
-	akaze->setThreshold(akaze_thresh);
-
-	fsd = cv::ximgproc::createFastLineDetector();
+	akaze = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 0, 3, 0.0005f, 5, 5);
+	//akaze->setThreshold(akaze_thresh);
 
 	matcher = cv::BFMatcher(cv::NORM_HAMMING);
 }
@@ -30,8 +28,11 @@ void FeatureExtractor::pointFeatureExtracte(cv::Mat& src, std::vector<cv::KeyPoi
 }
 
 // Query, Train
-void FeatureExtractor::featureMatching(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, cv::Mat& dscr1, cv::Mat& dscr2, double* matched_ratio)
+bool FeatureExtractor::featureMatching(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, cv::Mat& dscr1, cv::Mat& dscr2, double* matched_ratio)
 {
+	if (kp1.size() <= 0 || kp2.size() <= 0 || dscr1.rows <= 0 || dscr2.rows <= 0)
+		return false;
+
 	std::vector<std::vector<cv::DMatch>> matches;
 	std::vector<cv::DMatch> matched_matches;
 	std::vector<cv::KeyPoint> matched1, matched2;
@@ -60,7 +61,7 @@ void FeatureExtractor::featureMatching(std::vector<cv::KeyPoint>& kp1, std::vect
 	if (matched1.size() < 4 || homography.empty())
 	{
 		std::cout << "Not matche" << std::endl;
-		return;
+		return false;
 	}
 
 	std::vector<int> mappingIdx1;
@@ -87,6 +88,11 @@ void FeatureExtractor::featureMatching(std::vector<cv::KeyPoint>& kp1, std::vect
 	m_output.m_mappingIdx2 = mappingIdx2;
 	if(matched_ratio != nullptr)
 		*matched_ratio = inliers1.size() / (double)matched1.size();
+	/*cv::Mat res;
+	cv::drawMatches(m_input.m_LeftImg, inliers1, m_input.m_RightImg, inliers2, inlier_matches, res);
+	cv::imshow("test", res);
+	cv::waitKey(1);*/
+	return true;
 }
 
 void FeatureExtractor::allCompute()		// 초기버전
@@ -162,9 +168,9 @@ void FeatureExtractor::allCompute()		// 초기버전
 		std::vector<cv::Vec3b> colorMap = colorMapping(inliers1.size());
 		m_output.m_color = colorMap;
 		for (int i = 0; i < inliers1.size(); i++) {
-			cv::Point pt1 = cv::Point(inliers1.at(i).pt.x + 0.5f, inliers1.at(i).pt.y + 0.5f);
-			cv::Point pt2 = cv::Point(inliers2.at(i).pt.x + 640.5f, inliers2.at(i).pt.y + 0.5f);
-			cv::Scalar color = cv::Scalar(colorMap.at(i).val[0], colorMap.at(i).val[1], colorMap.at(i).val[2]);
+			cv::Point pt1 = cv::Point(inliers1[i].pt.x + 0.5f, inliers1[i].pt.y + 0.5f);
+			cv::Point pt2 = cv::Point(inliers2[i].pt.x + 640.5f, inliers2[i].pt.y + 0.5f);
+			cv::Scalar color = cv::Scalar(colorMap[i].val[0], colorMap[i].val[1], colorMap[i].val[2]);
 			cv::circle(ShowMatch, pt1, 3, color);
 			cv::circle(ShowMatch, pt2, 3, color);
 			cv::line(ShowMatch, pt1, pt2, color);
@@ -236,9 +242,9 @@ void FeatureExtractor::run()
 	std::vector<cv::Vec3b> colorMap = colorMapping(m_output.m_leftKp.size());
 	m_output.m_color = colorMap;
 	for (int i = 0; i < m_output.m_leftKp.size(); i++) {
-		cv::Point pt1 = cv::Point(m_output.m_leftKp.at(i).pt.x + 0.5f, m_output.m_leftKp.at(i).pt.y + 0.5f);
-		cv::Point pt2 = cv::Point(m_output.m_rightKp.at(i).pt.x + canvas.cols / 2.0 + 0.5f, m_output.m_rightKp.at(i).pt.y + 0.5f);
-		cv::Scalar color = cv::Scalar(colorMap.at(i).val[0], colorMap.at(i).val[1], colorMap.at(i).val[2]);
+		cv::Point pt1 = cv::Point(m_output.m_leftKp[i].pt.x + 0.5f, m_output.m_leftKp[i].pt.y + 0.5f);
+		cv::Point pt2 = cv::Point(m_output.m_rightKp[i].pt.x + canvas.cols / 2.0 + 0.5f, m_output.m_rightKp[i].pt.y + 0.5f);
+		cv::Scalar color = cv::Scalar(colorMap[i].val[0], colorMap[i].val[1], colorMap[i].val[2]);
 		cv::circle(canvas, pt1, 3, color);
 		cv::circle(canvas, pt2, 3, color);
 		cv::line(canvas, pt1, pt2, color);

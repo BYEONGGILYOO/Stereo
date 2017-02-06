@@ -11,6 +11,8 @@
 #include "FeatureExtractor.h"
 #include "Stereo.h"
 
+#include "functions.h"
+
 bool openCam(cv::VideoCapture* cap);
 bool readCam(cv::VideoCapture* cap, cv::Mat* img);
 
@@ -48,10 +50,25 @@ int main(int argc, char** argv)
 		stereo.setCalibOutput(stereoCalib.getOutput());
 	}*/
 
+	IPC ipc("Stereo_App.exe");
+	ipc.connect("Stereo_App.exe");
+	ipc.start("Stereo_App.exe");
+
+	Robot *robot = ipc.connect<Robot>("Robot_Pioneer.exe");
+	if (robot == nullptr) {
+		printf("Robot is not connected!\n");
+		return 0;
+	}
+
+	robot->KeyFrame[0][0] = 0;
+	robot->KeyFrame[0][1] = 1000;
+	robot->KeyFrame[0][2] = 10;
+
 	// main loop
 	while (1)
 	{
 		Stereo::Input stInput;
+		stInput.initialize();
 		mode = _NULL;
 		if (readCam(cap, img))
 		{
@@ -65,6 +82,7 @@ int main(int argc, char** argv)
 				stInput.m_leftImg = img[0];
 				stInput.m_rightImg = img[1];
 			}
+			stereo.setCalibOutput(stereoCalib.getOutput());
 			stereo.setInput(stInput);
 		}
 		else
@@ -77,16 +95,24 @@ int main(int argc, char** argv)
 			printf("keyframed\n");
 			stereo.keyframe();
 		}
+		if (robot->KeyFrame[0][0])
+		{
+			printf("keyframed\n");
+			stereo.keyframe();
+			robot->KeyFrame[0][0] = 1;
+		}
 
 		if (GetAsyncKeyState(0x53) & 0x8000) {		// S
 			if (stereo.save("..\\data\\stereo.dat"))
 				printf("ref point save done!\n");
 			else
 				printf("ref point save failed..\n");
-			if (stereoCalib.SaveCalibrationData("..\\data\\camera\\"))
-				printf("calibration data save done!\n");
-			else
-				printf("calibration data save failed..\n");
+
+			if(stereoCalib.isCalibed())
+				if (stereoCalib.SaveCalibrationData("..\\data\\camera\\"))
+					printf("calibration data save done!\n");
+				else
+					printf("calibration data save failed..\n");
 		}
 
 		if (GetAsyncKeyState(0x4C) & 0x8000) {		// L
@@ -277,6 +303,7 @@ int main(int argc, char** argv)
 //			cv::waitKey();
 //		}
 
+	std::cout << std::endl;
 	cv::waitKey(30);
 	}
 	return 0;

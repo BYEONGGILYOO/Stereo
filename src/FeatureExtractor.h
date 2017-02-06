@@ -3,7 +3,6 @@
 #include <iostream>
 #include <fstream>
 #include "openCV.h"
-#include "opencv2\ximgproc\fast_line_detector.hpp"
 
 //// main class
 class FeatureExtractor
@@ -36,7 +35,7 @@ private:
 	cv::Ptr<cv::AKAZE> akaze;
 	double akaze_thresh;
 	// line feature
-	cv::Ptr<cv::ximgproc::FastLineDetector> fsd;
+	//cv::Ptr<cv::ximgproc::FastLineDetector> fsd;
 
 	// matcher
 	cv::BFMatcher matcher;
@@ -68,7 +67,7 @@ public:
 		return m_output;
 	}
 	void pointFeatureExtracte(cv::Mat & src, std::vector<cv::KeyPoint>& kp, cv::Mat & dscr);
-	void featureMatching(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, cv::Mat & dscr1, cv::Mat & dscr2, double* matched_ratio = nullptr);
+	bool featureMatching(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, cv::Mat & dscr1, cv::Mat & dscr2, double* matched_ratio = nullptr);
 	void allCompute();
 	void run();
 	static std::vector<cv::Vec3b> colorMapping(int Size);
