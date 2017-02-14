@@ -13,7 +13,7 @@ Stereo::Stereo()
 	k2 = 0.0f;
 	p1 = 0.0f;
 	p2 = 0.0f;
-	K = cv::Matx33d(fX, 0.0f, cX, 0.0f, fY, cY, 0.0f, 0.0f, 1.0f);
+	K = cv::Matx33f(fX, 0.0f, cX, 0.0f, fY, cY, 0.0f, 0.0f, 1.0f);
 
 	window = cv::viz::Viz3d("Coordinate Frame");
 	wCoord = cv::viz::WCoordinateSystem(1000.0);
@@ -49,7 +49,7 @@ void Stereo::calculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyP
 	int size = (int)kp1.size();
 	for (int i = 0; i < size; i++)
 	{
-		cv::Matx31d threeD;
+		cv::Matx31f threeD;
 		float fDisparity = (kp1.at(i).pt.x - kp2.at(i).pt.x);
 		disparity.push_back(fDisparity);
 		//if (abs(fDisparity) > 5.f)	// parelles
@@ -257,7 +257,7 @@ void Stereo::run()
 
 			cv::Mat rvec, tvec;
 
-			cv::Mat zeroDistCoeffs(14, 1, CV_64F, cv::Scalar::all(0.0));
+			cv::Mat zeroDistCoeffs(14, 1, CV_32F, cv::Scalar::all(0.0));
 			try
 			{
 				cv::solvePnPRansac(objectPoints, imagePoints,
@@ -827,7 +827,7 @@ bool Stereo::load(char* dbPath)
 //	return true;
 //}
 
-void Stereo::estimateRigid3D(std::vector<cv::Vec3f>& pt1, std::vector<cv::Vec3f>& pt2, cv::Matx<double, 3, 3>& rot, cv::Matx<double, 3, 1>& tran, double* error)
+void Stereo::estimateRigid3D(std::vector<cv::Vec3f>& pt1, std::vector<cv::Vec3f>& pt2, cv::Matx33f& rot, cv::Matx31f& tran, double* error)
 {
 	
 	window1.showWidget("Coordinate Widget1", cv::viz::WCoordinateSystem(1000.0));
@@ -975,7 +975,7 @@ void Stereo::estimateRigid3D(std::vector<cv::Vec3f>& pt1, std::vector<cv::Vec3f>
 	
 	window1.spinOnce(15, true); window1.removeAllWidgets();
 }
-void Stereo::estimateRigid3D(std::vector<cv::Point3f>& pt1, std::vector<cv::Point3f>& pt2, cv::Matx<double, 3, 3>& rot, cv::Matx<double, 3, 1>& tran, double* error)
+void Stereo::estimateRigid3D(std::vector<cv::Point3f>& pt1, std::vector<cv::Point3f>& pt2, cv::Matx33f& rot, cv::Matx31f& tran, double* error)
 {
 	int size = std::min((int)pt1.size(), (int)pt2.size());
 	std::vector<cv::Vec3f> vecPt1, vecPt2;
