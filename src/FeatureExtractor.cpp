@@ -88,10 +88,7 @@ bool FeatureExtractor::featureMatching(std::vector<cv::KeyPoint>& kp1, std::vect
 	m_output.m_mappingIdx2 = mappingIdx2;
 	if(matched_ratio != nullptr)
 		*matched_ratio = inliers1.size() / (double)matched1.size();
-	/*cv::Mat res;
-	cv::drawMatches(m_input.m_LeftImg, inliers1, m_input.m_RightImg, inliers2, inlier_matches, res);
-	cv::imshow("test", res);
-	cv::waitKey(1);*/
+
 	return true;
 }
 
@@ -165,11 +162,11 @@ void FeatureExtractor::allCompute()		// 초기버전
 	if (1) {
 		cv::Mat ShowMatch;
 		cv::hconcat(left, right, ShowMatch);
-		std::vector<cv::Vec3b> colorMap = colorMapping(inliers1.size());
+		std::vector<cv::Vec3b> colorMap = colorMapping((int)inliers1.size());
 		m_output.m_color = colorMap;
 		for (int i = 0; i < inliers1.size(); i++) {
-			cv::Point pt1 = cv::Point(inliers1[i].pt.x + 0.5f, inliers1[i].pt.y + 0.5f);
-			cv::Point pt2 = cv::Point(inliers2[i].pt.x + 640.5f, inliers2[i].pt.y + 0.5f);
+			cv::Point pt1 = cv::Point((int)(inliers1[i].pt.x + 0.5f), (int)(inliers1[i].pt.y + 0.5f));
+			cv::Point pt2 = cv::Point((int)(inliers2[i].pt.x + 640.5f), (int)(inliers2[i].pt.y + 0.5f));
 			cv::Scalar color = cv::Scalar(colorMap[i].val[0], colorMap[i].val[1], colorMap[i].val[2]);
 			cv::circle(ShowMatch, pt1, 3, color);
 			cv::circle(ShowMatch, pt2, 3, color);
@@ -189,7 +186,7 @@ std::vector<cv::Vec3b> FeatureExtractor::colorMapping(int Size)
 	for (int i = Size; i > 0; i--)
 	{
 		cv::Vec3b tmp;
-		tmp.val[0] = (i*dHStep);
+		tmp.val[0] = (int)(i*dHStep);
 		tmp.val[1] = 255;
 		tmp.val[2] = 255;
 
@@ -239,11 +236,11 @@ void FeatureExtractor::run()
 
 	cv::Mat canvas;
 	cv::hconcat(m_input.m_LeftImg, m_input.m_RightImg, canvas);
-	std::vector<cv::Vec3b> colorMap = colorMapping(m_output.m_leftKp.size());
+	std::vector<cv::Vec3b> colorMap = colorMapping((int)m_output.m_leftKp.size());
 	m_output.m_color = colorMap;
 	for (int i = 0; i < m_output.m_leftKp.size(); i++) {
-		cv::Point pt1 = cv::Point(m_output.m_leftKp[i].pt.x + 0.5f, m_output.m_leftKp[i].pt.y + 0.5f);
-		cv::Point pt2 = cv::Point(m_output.m_rightKp[i].pt.x + canvas.cols / 2.0 + 0.5f, m_output.m_rightKp[i].pt.y + 0.5f);
+		cv::Point pt1 = cv::Point((int)(m_output.m_leftKp[i].pt.x + 0.5f), (int)(m_output.m_leftKp[i].pt.y + 0.5f));
+		cv::Point pt2 = cv::Point((int)(m_output.m_rightKp[i].pt.x + canvas.cols / 2.0 + 0.5f), (int)(m_output.m_rightKp[i].pt.y + 0.5f));
 		cv::Scalar color = cv::Scalar(colorMap[i].val[0], colorMap[i].val[1], colorMap[i].val[2]);
 		cv::circle(canvas, pt1, 3, color);
 		cv::circle(canvas, pt2, 3, color);

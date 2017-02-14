@@ -34,7 +34,7 @@ int main(int argc, char** argv)
 		return 0;
 
 	//// Stereo Calibration
-	StereoCalibration stereoCalib(7, 4, 0.026, 0.026);
+	StereoCalibration stereoCalib(7, 4, 0.026f, 0.026f);
 	int nFrames = 50;		// the num of chessboard
 	bool reg_chessboard = false;
 
@@ -304,7 +304,7 @@ int main(int argc, char** argv)
 //		}
 
 	std::cout << std::endl;
-	cv::waitKey(30);
+	cv::waitKey(10);
 	}
 	return 0;
 }

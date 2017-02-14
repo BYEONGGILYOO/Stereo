@@ -48,17 +48,17 @@ private:
 	cv::VideoCapture cap[2];
 
 	// camera param
-	double baseLine;
-	double covergence;
-	double fX;
-	double fY;
-	double cX;
-	double cY;
-	double k1;
-	double k2;
-	double p1;
-	double p2;
-	cv::Matx33d K;
+	float baseLine;
+	float covergence;
+	float fX;
+	float fY;
+	float cX;
+	float cY;
+	float k1;
+	float k2;
+	float p1;
+	float p2;
+	cv::Matx33f K;
 	cv::viz::Viz3d window1;
 	// visualize with viz module
 	cv::viz::Viz3d window;
@@ -75,12 +75,12 @@ public:
 	Stereo();
 	~Stereo();
 
-	inline void calculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, std::vector<cv::Matx31d>& dst)
+	inline void calculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, std::vector<cv::Matx31f>& dst)
 	{
 		std::vector<float> disparity;
 		calculateDepth(kp1, kp2, dst, disparity);
 	}
-	void calculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, std::vector<cv::Matx31d>& dst, std::vector<float>& disparity);
+	void calculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>& kp2, std::vector<cv::Matx31f>& dst, std::vector<float>& disparity);
 	void run();
 	void prevRun();
 	void drawMap();
@@ -98,6 +98,6 @@ public:
 	void setInput(const Input input, const CalibOutput calibOutput);
 	Output getOutput() const;
 	void setCalibOutput(const CalibOutput output);
-	void RnT2RT(cv::Matx33d & R, cv::Matx31d & T, cv::Matx44d & RT);
+	void RnT2RT(cv::Matx33f & R, cv::Matx31f & T, cv::Matx44f & RT);
 };
 

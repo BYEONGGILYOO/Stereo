@@ -47,7 +47,7 @@ int StereoCalibration::FindChessboard(Mat &view1, Mat &view2, bool reg)
 		cv::imshow("find chess corner", tmp);
 	}
 	cv::waitKey(1000);
-	return m_imagePoints1.size();
+	return (int)m_imagePoints1.size();
 }
 
 bool StereoCalibration::RunCalibration()

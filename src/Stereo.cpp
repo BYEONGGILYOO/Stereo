@@ -3,17 +3,17 @@
 Stereo::Stereo()
 	:m_mode(M_NULL)
 {
-	baseLine = 120.0;
-	covergence = 0.00285;
-	fX = 700.0;
-	fY = 700.0;
-	cX = 320.0;
-	cY = 240.0;
-	k1 = -0.15;
-	k2 = 0.0;
-	p1 = 0.0;
-	p2 = 0.0;
-	K = cv::Matx33d(fX, 0.0, cX, 0.0, fY, cY, 0.0, 0.0, 1.0);
+	baseLine = 120.0f;
+	covergence = 0.00285f;
+	fX = 700.0f;
+	fY = 700.0f;
+	cX = 320.0f;
+	cY = 240.0f;
+	k1 = -0.15f;
+	k2 = 0.0f;
+	p1 = 0.0f;
+	p2 = 0.0f;
+	K = cv::Matx33d(fX, 0.0f, cX, 0.0f, fY, cY, 0.0f, 0.0f, 1.0f);
 
 	window = cv::viz::Viz3d("Coordinate Frame");
 	wCoord = cv::viz::WCoordinateSystem(1000.0);
@@ -41,16 +41,17 @@ Stereo::~Stereo()
 {
 }
 
-void Stereo::calculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>&kp2, std::vector<cv::Matx31d>& dst, std::vector<float>& disparity)
+void Stereo::calculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyPoint>&kp2, std::vector<cv::Matx31f>& dst, std::vector<float>& disparity)
 {
 	dst.clear();
-	std::vector<float> tmpDisparity;
-	int size = kp1.size();
+	disparity.clear();
+
+	int size = (int)kp1.size();
 	for (int i = 0; i < size; i++)
 	{
-		cv::Vec3f threeD;
+		cv::Matx31d threeD;
 		float fDisparity = (kp1.at(i).pt.x - kp2.at(i).pt.x);
-		tmpDisparity.push_back(fDisparity);
+		disparity.push_back(fDisparity);
 		//if (abs(fDisparity) > 5.f)	// parelles
 		//{
 			threeD.val[2] = fX * baseLine / fDisparity;											// Z
@@ -59,7 +60,6 @@ void Stereo::calculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyP
 			dst.push_back(threeD);
 		//}
 	}
-	disparity = tmpDisparity;
 }
 void Stereo::run()
 {
@@ -83,9 +83,9 @@ void Stereo::run()
 	calculateDepth(feOutput.m_leftKp, feOutput.m_rightKp, m_output.m_WorldCoord, dispari);
 
 	//cv::Mat depth(m_input.m_leftImg.size(), CV_32FC3, cv::Scalar::all(0));
-	std::vector<cv::Matx31d> depth;
+	std::vector<cv::Matx31f> depth;
 
-	int size = m_output.m_WorldCoord.size();
+	int size = (int)m_output.m_WorldCoord.size();
 	for (int i = 0; i < size; i++)
 	{
 		//cv::Point pt = cv::Point((int)(feOutput.m_leftKp[i].pt.x + 0.5f), (int)(feOutput.m_leftKp[i].pt.y + 0.5f));
@@ -103,8 +103,7 @@ void Stereo::run()
 
 	std::cout << "Stereo::run()\t\t-->\t" << (double)(getTickCount() - time) / getTickFrequency() * 1000.0 << std::endl;
 	//
-	//cv::waitKey(15);
-	window.spinOnce(10, true);
+	window.spinOnce(5, true);
 
 	m_mode = -1;
 	//if (/*m_input.*/m_mode == M_QUERY)
@@ -232,7 +231,7 @@ void Stereo::run()
 	
 	if (0)
 	{
-		int dbSize = m_vertices.size();
+		int dbSize = (int)m_vertices.size();
 		if (dbSize != 0)
 		{
 			Data data = m_vertices.at(dbSize - 1)->getData();			
@@ -370,7 +369,7 @@ void Stereo::prevRun() {
 	FeatureExtractor::Output feOutput = m_feature.getOutput();
 	// caculate depth
 	cv::Mat depth(m_input.m_leftImg.size(), CV_32FC3, cv::Scalar::all(0));
-	int size = feOutput.m_leftKp.size();
+	int size = (int)feOutput.m_leftKp.size();
 	for (int i = 0; i < size; i++)
 	{
 		cv::Point pt = cv::Point((int)(feOutput.m_leftKp.at(i).pt.x + 0.5f), (int)(feOutput.m_leftKp.at(i).pt.y + 0.5f));
@@ -460,63 +459,48 @@ void Stereo::drawMap()
 
 	window.showWidget("Coordinate Widget", wCoord);
 	window.showWidget("Grid Widget", wGrid, cv::Affine3d(cv::Vec3d(CV_PI / 2.0, 0, 0), cv::Vec3d()));
-	//std::vector<cv::Vec3b> color = FeatureExtractor::colorMapping(m_vertices.size());
-	std::vector<cv::Matx31d> vec3Dcoord;
-	std::vector<cv::Affine3d> vec3Dpose;
-	cv::Matx44d _RT = cv::Matx44d::eye();
+	std::vector<cv::Matx31f> vec3Dcoord;
+	cv::Matx44f _RT = cv::Matx44f::eye();
 
-	int64 tt = 0;
 	for (int i = 0; i < m_vertices.size(); i++)
 	{
 		cv::Mat depth(m_input.m_leftImg.size(), CV_32FC3, cv::Scalar::all(0));
 		cv::Mat colorMap(m_input.m_leftImg.size(), CV_8UC3, cv::Scalar::all(0));
 		cv::Affine3d affine = cv::Affine3d(cv::Vec3d::all((0.0)));
 
-		int dataSize = m_vertices.at(i)->getData().m_KeyPoint.size();
+		int dataSize = (int)m_vertices.at(i)->getData().m_KeyPoint.size();
 
-		if (i == 0) {
+		if (i == 0) {	// if loop closer fuction is added, modify this sentece
 			for (int j = 0; j < dataSize; j++)
 				vec3Dcoord.push_back(m_vertices[i]->getData().m_WorldCoord[j]);
 		}
-		else {		// i > 1
-			cv::Matx44d tmpRT;
+		else {		// i > 0
+			cv::Matx44f tmpRT;
 			RnT2RT(m_vertices[i - 1]->getEdges()[0].getDist().R, m_vertices[i - 1]->getEdges()[0].getDist().T, tmpRT);
 			_RT = tmpRT * _RT;
 
 			for (int j = 0; j < dataSize; j++) {
-				cv::Matx41d mat3D;
+				cv::Matx41f mat3D;
 				mat3D.val[0] = m_vertices[i]->getData().m_WorldCoord[j].val[0];
 				mat3D.val[1] = m_vertices[i]->getData().m_WorldCoord[j].val[1];
 				mat3D.val[2] = m_vertices[i]->getData().m_WorldCoord[j].val[2];
 				mat3D.val[3] = 1.0;
 
-				cv::Matx41d _RTed = _RT * mat3D;
-				cv::Matx31d _RTed2;
+				cv::Matx41f _RTed = _RT * mat3D;
+				cv::Matx31f _RTed2;
 				_RTed2.val[0] = _RTed.val[0] / _RTed.val[3];
 				_RTed2.val[1] = _RTed.val[1] / _RTed.val[3];
 				_RTed2.val[2] = _RTed.val[2] / _RTed.val[3];
 				vec3Dcoord.push_back(_RTed2);
 			}
 		}
-
-		//if (i == 1) {
-		//		//_R = m_vertices.at(i-1)->getEdges().at(0).getDist().R.clone();
-		//		//_T = m_vertices.at(i-1)->getEdges().at(0).getDist().T.clone();
-		//		RnT2RT(m_vertices[i - 1]->getEdges()[0].getDist().R, m_vertices[i - 1]->getEdges()[0].getDist().T, _RT);
-		//}
-		//else if (i > 1) {
-		//	cv::Mat tmpRT;
-		//	RnT2RT(m_vertices[i - 1]->getEdges()[0].getDist().R, m_vertices[i - 1]->getEdges()[0].getDist().T, tmpRT);
-		//	_RT = tmpRT * _RT;
-		//}
-			
 	}
 	cv::viz::WCloud wc(vec3Dcoord, cv::viz::Color::yellow());
 	wc.setRenderingProperty(cv::viz::POINT_SIZE, 2);
 	window.showWidget("Point Cloud", wc);
 	std::cout << "Stereo::drawMap()\t-->\t" << (double)(getTickCount() - time) / getTickFrequency() * 1000.0 << std::endl;
 
-	window.spinOnce(15, true);	
+	window.spinOnce(5, true);	
 }
 
 bool Stereo::save(char* dbPath)
@@ -526,7 +510,7 @@ bool Stereo::save(char* dbPath)
 		return false;
 
 	std::cout << "==== ====  Save the Data" << std::endl;
-	int totVerticeSize = m_vertices.size();
+	int totVerticeSize = (int)m_vertices.size();
 	DBsaver.write((char*)&totVerticeSize, sizeof(int));
 	std::cout << "====  Path: " << std::string(dbPath) << std::endl;
 	std::cout << "====  Data Size: " << totVerticeSize << std::endl;
@@ -537,7 +521,7 @@ bool Stereo::save(char* dbPath)
 		Data& data = m_vertices.at(i)->getData();
 
 		// keypoint & 3D data
-		int keypointSize = data.m_KeyPoint.size();
+		int keypointSize = (int)data.m_KeyPoint.size();
 		DBsaver.write((char*)&keypointSize, sizeof(int));
 		for (int j = 0; j < keypointSize; j++)
 		{
@@ -552,10 +536,10 @@ bool Stereo::save(char* dbPath)
 			DBsaver.write((char*)&kp.size, sizeof(float));
 
 			// 3d data
-			cv::Matx31d &threeD = data.m_WorldCoord.at(j);
-			DBsaver.write((char*)&threeD.val[0], sizeof(double));
-			DBsaver.write((char*)&threeD.val[1], sizeof(double));
-			DBsaver.write((char*)&threeD.val[2], sizeof(double));
+			cv::Matx31f &threeD = data.m_WorldCoord.at(j);
+			DBsaver.write((char*)&threeD.val[0], sizeof(float));
+			DBsaver.write((char*)&threeD.val[1], sizeof(float));
+			DBsaver.write((char*)&threeD.val[2], sizeof(float));
 		}
 		// descriptor
 		cv::Mat &dscr = data.m_Descriptor;
@@ -575,7 +559,7 @@ bool Stereo::save(char* dbPath)
 	{
 		// edge
 		std::vector<Edge> &edges = m_vertices.at(i)->getEdges();
-		int edgeSize = edges.size();
+		int edgeSize = (int)edges.size();
 		DBsaver.write((char*)&edgeSize, sizeof(int));
 
 		for (int j = 0; j < edgeSize; j++)
@@ -586,14 +570,15 @@ bool Stereo::save(char* dbPath)
 			DBsaver.write((char*)&startIdx, sizeof(int));
 			DBsaver.write((char*)&endIdx, sizeof(int));
 
-			cv::Matx33d &R = edgeDist.R;			
-			DBsaver.write((char*)R.val, 3 * 3 * sizeof(double));
+			cv::Matx33f &R = edgeDist.R;			
+			DBsaver.write((char*)R.val, 3 * 3 * sizeof(float));
 
-			cv::Matx31d &T = edgeDist.T;
-			DBsaver.write((char*)T.val, 3 * 1 * sizeof(double));
+			cv::Matx31f &T = edgeDist.T;
+			DBsaver.write((char*)T.val, 3 * 1 * sizeof(float));
 		}
 	}
 	std::cout << std::endl;
+	return true;
 }
 //bool Stereo::save(char* dbPath)
 //{
@@ -678,7 +663,7 @@ bool Stereo::load(char* dbPath)
 		int keypointSize = 0;
 		DBloader.read((char*)&keypointSize, sizeof(int));
 		std::vector<cv::KeyPoint> kps;
-		std::vector<cv::Matx31d> threeDs;
+		std::vector<cv::Matx31f> threeDs;
 
 		for (int j = 0; j < keypointSize; j++)
 		{
@@ -692,10 +677,10 @@ bool Stereo::load(char* dbPath)
 			DBloader.read((char*)&kp.size, sizeof(float));
 			kps.push_back(kp);
 
-			cv::Matx31d threeD;
-			DBloader.read((char*)&threeD.val[0], sizeof(double));
-			DBloader.read((char*)&threeD.val[1], sizeof(double));
-			DBloader.read((char*)&threeD.val[2], sizeof(double));
+			cv::Matx31f threeD;
+			DBloader.read((char*)&threeD.val[0], sizeof(float));
+			DBloader.read((char*)&threeD.val[1], sizeof(float));
+			DBloader.read((char*)&threeD.val[2], sizeof(float));
 			threeDs.push_back(threeD);
 		}
 		int dscr_cols = 0;
@@ -751,11 +736,11 @@ bool Stereo::load(char* dbPath)
 
 			EdgeDist edgeDist;
 			
-			cv::Matx33d &R = edgeDist.R;
-			DBloader.read((char*)R.val, 3 * 3 * sizeof(double));
+			cv::Matx33f &R = edgeDist.R;
+			DBloader.read((char*)R.val, 3 * 3 * sizeof(float));
 
-			cv::Matx31d &T = edgeDist.T;
-			DBloader.read((char*)T.val, 3 * 1 * sizeof(double));
+			cv::Matx31f &T = edgeDist.T;
+			DBloader.read((char*)T.val, 3 * 1 * sizeof(float));
 
 			edges.push_back(Edge(vertices.at(startIdx), vertices.at(endIdx), edgeDist));
 		}
@@ -764,6 +749,7 @@ bool Stereo::load(char* dbPath)
 	m_vertices = vertices;
 
 	std::cout << std::endl;
+	return true;
 }
 //bool Stereo::load(char * dbPath)
 //{
@@ -847,7 +833,7 @@ void Stereo::estimateRigid3D(std::vector<cv::Vec3f>& pt1, std::vector<cv::Vec3f>
 	window1.showWidget("Coordinate Widget1", cv::viz::WCoordinateSystem(1000.0));
 
 	// ref : http://nghiaho.com/?page_id=671
-	int size = std::min(pt1.size(), pt2.size());
+	int size = std::min((int)pt1.size(), (int)pt2.size());
 
 	cv::Mat inliers, _affine3d;
 	cv::estimateAffine3D(pt1, pt2, _affine3d, inliers, 3.0);
@@ -896,7 +882,7 @@ void Stereo::estimateRigid3D(std::vector<cv::Vec3f>& pt1, std::vector<cv::Vec3f>
 	cv::Mat cent1(3, 1, CV_64FC1, cv::Scalar::all(0.0));
 	cv::Mat cent2(3, 1, CV_64FC1, cv::Scalar::all(0.0));
 	
-	size = point1.size();
+	size = (int)point1.size();
 	for (int i = 0; i < size; i++)
 	{
 		cent1 += point1.at(i);
@@ -991,7 +977,7 @@ void Stereo::estimateRigid3D(std::vector<cv::Vec3f>& pt1, std::vector<cv::Vec3f>
 }
 void Stereo::estimateRigid3D(std::vector<cv::Point3f>& pt1, std::vector<cv::Point3f>& pt2, cv::Matx<double, 3, 3>& rot, cv::Matx<double, 3, 1>& tran, double* error)
 {
-	int size = std::min(pt1.size(), pt2.size());
+	int size = std::min((int)pt1.size(), (int)pt2.size());
 	std::vector<cv::Vec3f> vecPt1, vecPt2;
 	for(int i=0; i<size; i++)
 	{
@@ -1010,7 +996,7 @@ void Stereo::keyframe()
 	db.m_WorldCoord = m_output.m_WorldCoord;
 
 
-	int nSize = m_vertices.size();
+	int nSize = (int)m_vertices.size();
 
 	std::string filename = "..\\data\\Image\\" + std::to_string(nSize + 1) + ".jpg";
 	saveImage(filename);
@@ -1050,7 +1036,7 @@ void Stereo::keyframe()
 
 		// calculate R|T with solvePnP
 		cv::Mat rvec, tvec;
-		cv::Mat zeroDistCoeffs(14, 1, CV_64F, cv::Scalar::all(0.0));
+		cv::Mat zeroDistCoeffs(14, 1, CV_32F, cv::Scalar::all(0.0));
 
 		try
 		{
@@ -1143,9 +1129,9 @@ void Stereo::setCalibOutput(const CalibOutput output)
 	m_input.m_calibOutput.isCalibed = output.isCalibed;
 }
 
-void Stereo::RnT2RT(cv::Matx33d& R, cv::Matx31d& T, cv::Matx44d& RT)
+void Stereo::RnT2RT(cv::Matx33f& R, cv::Matx31f& T, cv::Matx44f& RT)
 {
-	RT = cv::Matx44d::eye();
+	RT = cv::Matx44f::eye();
 	RT.val[0] = R.val[0];
 	RT.val[1] = R.val[1];
 	RT.val[2] = R.val[2];
