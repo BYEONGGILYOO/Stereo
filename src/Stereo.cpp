@@ -19,7 +19,8 @@ Stereo::Stereo()
 	wCoord = cv::viz::WCoordinateSystem(1000.0);
 	wGrid = cv::viz::WGrid(cv::Vec<int, 2>::all(20), cv::Vec<double, 2>::all((1000.0)));
 	wGrid.setRenderingProperty(cv::viz::OPACITY, 0.3);
-	
+	cv::namedWindow("Canvas", CV_WINDOW_AUTOSIZE);
+
 	m_color = FeatureExtractor::colorMapping(20);
 
 	// test
@@ -52,13 +53,15 @@ void Stereo::calculateDepth(std::vector<cv::KeyPoint>& kp1, std::vector<cv::KeyP
 		cv::Matx31f threeD;
 		float fDisparity = (kp1.at(i).pt.x - kp2.at(i).pt.x);
 		disparity.push_back(fDisparity);
-		//if (abs(fDisparity) > 5.f)	// parelles
-		//{
+		//if (abs(fDisparity) > 5.f)	// parelles --> it needs to debug.
+		{
 			threeD.val[2] = fX * baseLine / fDisparity;											// Z
 			threeD.val[0] = (kp1.at(i).pt.x - cX) * threeD.val[2] / fX;							// X
 			threeD.val[1] = (kp2.at(i).pt.y - cY) * threeD.val[2] / fY;							// Y
 			dst.push_back(threeD);
-		//}
+			//kp1.erase(kp1.begin() + i);
+			//kp2.erase(kp2.begin() + i);
+		}
 	}
 }
 void Stereo::run()
@@ -95,15 +98,16 @@ void Stereo::run()
 	m_output.m_Descriptor = feOutput.m_leftDescr;		// save reference left descriptor
 	m_output.m_KeyPoint = feOutput.m_leftKp;			// save reference left keypoint
 	
-	cv::viz::WCloud wCloud(depth, cv::viz::Color::white());
-	wCloud.setRenderingProperty(cv::viz::POINT_SIZE, 2);
-	window.showWidget("Cloud Widget", wCloud);
+	// 3d visualize
+	//cv::viz::WCloud wCloud(depth, cv::viz::Color::white());
+	//wCloud.setRenderingProperty(cv::viz::POINT_SIZE, 2);
+	//window.showWidget("Cloud Widget", wCloud);
 	window.showWidget("Coordinate Widget", wCoord);
 	window.showWidget("Grid Widget", wGrid, cv::Affine3d(cv::Vec3d(CV_PI / 2.0, 0, 0), cv::Vec3d()));
+	window.spinOnce(5, true);
 
 	std::cout << "Stereo::run()\t\t-->\t" << (double)(getTickCount() - time) / getTickFrequency() * 1000.0 << std::endl;
-	//
-	window.spinOnce(5, true);
+	
 
 	m_mode = -1;
 	//if (/*m_input.*/m_mode == M_QUERY)
@@ -475,8 +479,12 @@ void Stereo::drawMap()
 				vec3Dcoord.push_back(m_vertices[i]->getData().m_WorldCoord[j]);
 		}
 		else {		// i > 0
+			cv::Matx33f R_inv = m_vertices[i - 1]->getEdges()[0].getDist().R.inv();
+			cv::Matx31f P = -R_inv*m_vertices[i - 1]->getEdges()[0].getDist().T;
+
 			cv::Matx44f tmpRT;
-			RnT2RT(m_vertices[i - 1]->getEdges()[0].getDist().R, m_vertices[i - 1]->getEdges()[0].getDist().T, tmpRT);
+			//RnT2RT(m_vertices[i - 1]->getEdges()[0].getDist().R, m_vertices[i - 1]->getEdges()[0].getDist().T, tmpRT);
+			RnT2RT(R_inv, P, tmpRT);
 			_RT = tmpRT * _RT;
 
 			for (int j = 0; j < dataSize; j++) {
@@ -998,7 +1006,7 @@ void Stereo::keyframe()
 
 	int nSize = (int)m_vertices.size();
 
-	std::string filename = "..\\data\\Image\\" + std::to_string(nSize + 1) + ".jpg";
+	std::string filename = "..\\data\\Image\\" + std::to_string(nSize) + ".jpg";
 	saveImage(filename);
 
 	Vertex* vtx = new Vertex(nSize, db);
@@ -1068,11 +1076,31 @@ void Stereo::keyframe()
 		dist.T = P.clone();*/
 
 		dist.R = R.clone();
-		std::cout << R << std::endl;
-		std::cout << dist.R << std::endl;
+		//std::cout << R << std::endl;
+		//std::cout << dist.R << std::endl;
 		dist.T = tvec.clone();
 		m_vertices.push_back(vtx);
 		m_vertices.at(nSize - 1)->addEdge(vtx, dist);
+
+		//matching visualize
+		cv::Mat canvas;
+		cv::hconcat(m_input.m_leftImg, m_input.m_rightImg, canvas);
+		int i = m_vertices.size() - 1;
+		std::string filename = "..\\data\\Image\\" + std::to_string(i - 1) + ".jpg";
+		cv::vconcat(loadImage(filename), canvas, canvas);
+		int _size = _feOutput.m_leftKp.size();
+		std::vector<cv::Vec3b> _colorMap = _fe.colorMapping(_size);
+		for (int _i = 0; _i < _size; _i++)
+		{
+			cv::Point pt1 = cv::Point(_feOutput.m_leftKp.at(_i).pt.x + 0.5f, _feOutput.m_leftKp.at(_i).pt.y + 0.5f);
+			cv::Point pt2 = cv::Point(_feOutput.m_rightKp.at(_i).pt.x + 0.5f, _feOutput.m_rightKp.at(_i).pt.y + 480.5f);
+			cv::Scalar color = cv::Scalar(_colorMap.at(_i).val[0], _colorMap.at(_i).val[1], _colorMap.at(_i).val[2]);
+			cv::circle(canvas, pt1, 3, color);
+			cv::circle(canvas, pt2, 3, color);
+			cv::line(canvas, pt1, pt2, color);
+		}
+		cv::resize(canvas, canvas, cv::Size(640, 480));
+		cv::imshow("Canvas", canvas);
 	}	
 }
 

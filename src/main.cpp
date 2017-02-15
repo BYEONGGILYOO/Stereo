@@ -59,10 +59,13 @@ int main(int argc, char** argv)
 		printf("Robot is not connected!\n");
 		return 0;
 	}
+	else {
+		printf("Robot_Pioneer is connected!\n");
+	}
 
 	robot->KeyFrame[0][0] = 0;
-	robot->KeyFrame[0][1] = 1000;
-	robot->KeyFrame[0][2] = 10;
+	robot->KeyFrame[0][1] = 100;
+	robot->KeyFrame[0][2] = 1;
 
 	// main loop
 	while (1)
@@ -95,11 +98,11 @@ int main(int argc, char** argv)
 			printf("keyframed\n");
 			stereo.keyframe();
 		}
-		if (robot->KeyFrame[0][0])
+		if (robot->KeyFrame[0][0] == 1.0)
 		{
 			printf("keyframed\n");
 			stereo.keyframe();
-			robot->KeyFrame[0][0] = 1;
+			robot->KeyFrame[0][0] = 0;
 		}
 
 		if (GetAsyncKeyState(0x53) & 0x8000) {		// S

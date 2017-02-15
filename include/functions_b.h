@@ -37,9 +37,9 @@ struct function_cummunication
 	//타의로 들어오는 함수구동 시그널:1, 자의로 구동되는 시그널:2
 	int trigger = 0; // 1:triggering by eng, 2:triggering by itself
 
-	//함수 구동 시그널을 받았는지 체크됨. 
-	//ex) trigger = 1, fire = 0 -> 엔진이 구동 시그널을 줬지만 함수 구동 안됨.
-	//ex) trigger = 1, fire = 1 -> 엔진이 구동 시그널을 줬고, 함수 구동 됨.
+					 //함수 구동 시그널을 받았는지 체크됨. 
+					 //ex) trigger = 1, fire = 0 -> 엔진이 구동 시그널을 줬지만 함수 구동 안됨.
+					 //ex) trigger = 1, fire = 1 -> 엔진이 구동 시그널을 줬고, 함수 구동 됨.
 	int fire = 0;
 };
 
@@ -127,21 +127,21 @@ public:
 
 		if (finder->second.hMapFile == NULL)
 		{
+			printf("Could not open file mapping object (%s).\n", finder->second.exe_name.c_str());
 			finder->second.MMF_state = -1;
 
 			if (f_name == own_name)
 			{
-				printf("Open ipc (%s).\n", finder->second.exe_name.c_str());
+				printf("Try to create MMF\n");
 				if (openMMF(finder) == 0) return 0;
 				else openMMF_flag = 1;
 			}
 			else
 			{
-				printf("Could not open ipc (%s).\n", finder->second.exe_name.c_str());
 				return 0;
 			}
+
 		}
-		else printf("Connection success (%s).\n", finder->second.exe_name.c_str());
 
 		finder->second.pBuf = (LPTSTR)MapViewOfFile(finder->second.hMapFile, // handle to map object
 			FILE_MAP_ALL_ACCESS,  // read/write permission
@@ -294,7 +294,7 @@ public:
 };
 
 
-struct NaviEngine
+struct Engine
 {
 	int state = 0;
 };
@@ -317,7 +317,7 @@ struct Robot
 	//double sub_goal_y = 0.0;
 	//double sub_goal_th = 0.0;
 	int sub_goal_number = 0;
-	double sub_goal[20][4]; // [order][{x, y, th, idx}]
+	double sub_goal[20][3];
 
 	//////////////////////////// output ////////////////////////////
 
@@ -357,7 +357,7 @@ struct Kinect1Data
 	bool get_color = 1;
 	bool get_grid = 1;
 
-	int        cgridWidth = 500; 
+	int        cgridWidth = 500;
 	int        cgridHeight = 500;
 	int		   cRobotCol = 250;
 	int		   cRobotRow = 350;
@@ -383,61 +383,20 @@ struct Kinect2Data
 	int        cColorWidth = 960; // 1920 / 2;
 	int        cColorHeight = 540; // 1080 / 2;
 	unsigned char data[960 * 540 * 3];
-
-	///<Color>///
-	bool BodyTracked[6];				//Ex) {0,0,0,0,1,0} or {1,0,0,0,1,0} or {0,0,1,0,1,1}
-	double JointData[6][25][3];			//joints, ColorSpace(x,y, jointsState)
-	double JointsWorldCoordinate[6][25][3];	//WorldCoordinate(x,y,z), 
-											///<Texture>///
-	unsigned char BodyIndexMat_data[424 * 512 * 3];		//BodyIndex Mat
-	unsigned char body_img_data[424 * 512 * 1];			//body_img Mat
-};
-struct Kinect2PointSLAMData : Kinect2Data
-{
-	//////////////////////////// input ////////////////////////////
-	int mode = 0;
-
-	int queryNodeSize = 0;
-	int queryNodeIdx[10];
-
-	//////////////////////////// output ////////////////////////////
-	double relatedOdo[10][3];
 };
 
 struct HumanReIdentificationData
 {
+
 	//////////////////////////// input ////////////////////////////
-	int Mode = 0;	///	<Notification> /// 
-	bool draw_flag = 1;	//	Mode 0: stanby, Mode 1: ActionRecognition, Mode 2: LoadDB, Mode 3: HumanRecognition, Mode 9: Reset	
-	bool TakePicture = 0;
-	int TargetLabel = 0;
-
-	bool ModeRunning = false;
-	bool isRunning = true;
-	bool RcognitionFinish = 1;
+	int Mode = 0;
+	bool draw_flag = 1;
+	bool TakePicture = 1;
 	//////////////////////////// output ////////////////////////////
-	float score[10];
-	float Color_likelihood[10];
-	double Color_distance[10];
-	float Texture_likelihood[10];
-	double Resultweight_color[10] = { 0, };
-	double Resultweight_texture[10] = { 0, };
-
+	float score[5 + 1];
+	float Color_likelihood[5 + 1];
+	float Texture_likelihood[5 + 1];
 	int Color_result = 0;
 	int Texture_result = 0;
-	int Combine_result = 0;
-
 	int people_count = 0;
-	int frame_count_color = 0;
-	int frame_count_texture = 0;
-
-	double StdDeviation_Color = 0;
-	double StdDeviation_Texture = 0;
-};
-
-struct Navigation
-{
-	int mode = 0;
-	int goalIdx = -1;
-	int location = -1;
 };
