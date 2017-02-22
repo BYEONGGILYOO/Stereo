@@ -19,6 +19,7 @@ Stereo::Stereo()
 	wCoord = cv::viz::WCoordinateSystem(1000.0);
 	wGrid = cv::viz::WGrid(cv::Vec<int, 2>::all(20), cv::Vec<double, 2>::all((1000.0)));
 	wGrid.setRenderingProperty(cv::viz::OPACITY, 0.3);
+	wCamPos = cv::viz::WCameraPosition(K, 1000.0);
 	cv::namedWindow("Canvas", CV_WINDOW_AUTOSIZE);
 
 	m_color = FeatureExtractor::colorMapping(20);
@@ -104,6 +105,7 @@ void Stereo::run()
 	//window.showWidget("Cloud Widget", wCloud);
 	window.showWidget("Coordinate Widget", wCoord);
 	window.showWidget("Grid Widget", wGrid, cv::Affine3d(cv::Vec3d(CV_PI / 2.0, 0, 0), cv::Vec3d()));
+	//window.showWidget("Camera Position Widget", wCamPos);
 	window.spinOnce(5, true);
 
 	std::cout << "Stereo::run()\t\t-->\t" << (double)(getTickCount() - time) / getTickFrequency() * 1000.0 << std::endl;
@@ -458,9 +460,6 @@ void Stereo::drawMap()
 		return;
 
 	int64 time = getTickCount();
-	cv::viz::WCloudCollection wCloudCollection;
-	wCloudCollection.setRenderingProperty(cv::viz::POINT_SIZE, 2);
-
 	window.showWidget("Coordinate Widget", wCoord);
 	window.showWidget("Grid Widget", wGrid, cv::Affine3d(cv::Vec3d(CV_PI / 2.0, 0, 0), cv::Vec3d()));
 	std::vector<cv::Matx31f> vec3Dcoord;
@@ -504,8 +503,9 @@ void Stereo::drawMap()
 		}
 	}
 	cv::viz::WCloud wc(vec3Dcoord, cv::viz::Color::yellow());
-	wc.setRenderingProperty(cv::viz::POINT_SIZE, 2);
+	wc.setRenderingProperty(cv::viz::POINT_SIZE, 1);
 	window.showWidget("Point Cloud", wc);
+	window.showWidget("Camera Position Cloud", wCamPos, cv::Affine3d(_RT));
 	std::cout << "Stereo::drawMap()\t-->\t" << (double)(getTickCount() - time) / getTickFrequency() * 1000.0 << std::endl;
 
 	window.spinOnce(5, true);	

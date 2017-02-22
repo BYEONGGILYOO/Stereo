@@ -4,8 +4,8 @@ FeatureExtractor::FeatureExtractor()
 	:akaze_thresh(3e-4), 
 	K(cv::Matx33d(700.0, 0, 320.0, 0, 700.0, 240.0, 0, 0, 1.0)), nn_match_ratio(0.8), ransac_thresh(2.5)
 {
-	akaze = cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, 0, 3, 0.0005f, 5, 5);
-	//akaze->setThreshold(akaze_thresh);
+	akaze = cv::AKAZE::create(/*cv::AKAZE::DESCRIPTOR_MLDB, 0, 3, 0.0005f, 5, 5*/);
+	akaze->setThreshold(akaze_thresh);
 
 	matcher = cv::BFMatcher(cv::NORM_HAMMING);
 }

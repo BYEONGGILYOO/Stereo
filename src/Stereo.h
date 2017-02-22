@@ -64,6 +64,7 @@ private:
 	cv::viz::Viz3d window;
 	cv::viz::WCoordinateSystem wCoord;
 	cv::viz::WGrid wGrid;
+	cv::viz::WCameraPosition wCamPos;
 	
 	std::vector<cv::Vec3b> m_color;
 	// test full depth
